@@ -572,3 +572,39 @@ footer { will-change: transform, opacity; }
   .qrwrap img.fx-pop, button.fx-press, .fx-shake { animation: none !important; }
   .fx-ambient, #fx-confetti { display: none !important; }
 }
+
+/* ---------- ads (Adsterra) ---------- */
+.ad-leaderboard {
+  display: flex;
+  justify-content: center;
+  margin: 2rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+  min-height: 90px;
+}
+.ad-leaderboard iframe { max-width: 100%; }
+.ad-mobile {
+  display: none;
+  justify-content: center;
+  margin: 1.5rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+  min-height: 50px;
+}
+.ad-mobile iframe { max-width: 100%; }
+@media (max-width: 759px) {
+  .ad-leaderboard { display: none; }
+  .ad-mobile { display: flex; }
+}
+.ad-towers {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1.5rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.ad-tower { width: 160px; max-width: 100%; overflow: hidden; }
+.ad-tower iframe { max-width: 100%; }
