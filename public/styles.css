@@ -97,7 +97,7 @@ body {
 
 .ticket {
   display: grid;
-  grid-template-columns: auto 2px minmax(0, 1fr);
+  grid-template-columns: minmax(0, auto) 2px minmax(0, 1fr);
   border: 2px solid var(--ink);
   border-radius: 14px;
   overflow: hidden;
@@ -107,6 +107,7 @@ body {
 
 .stub {
   grid-column: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -119,11 +120,16 @@ body {
 
 .stub-label { font-size: 0.8rem; color: #b9c3da; }
 
+/* 12-char codes must fit: fluid size, wraps mid-code on narrow tickets. */
 #share-code {
   font-family: var(--mono);
   font-weight: 700;
-  font-size: clamp(1.9rem, 7vw, 2.6rem);
-  letter-spacing: 0.12em;
+  font-size: clamp(1.05rem, 1rem + 2.2vw, 1.5rem);
+  letter-spacing: 0.08em;
+  text-align: center;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .tear {
@@ -278,7 +284,7 @@ button.quiet:hover { border-color: var(--red); color: var(--red); }
   font-size: 0.92rem;
 }
 .filelist li + li { border-top: 1px dashed var(--line); }
-.filelist .fname { font-weight: 500; overflow-wrap: anywhere; }
+.filelist .fname { font-weight: 500; overflow-wrap: anywhere; min-width: 0; }
 .filelist .bytes { margin-left: auto; white-space: nowrap; }
 .filelist .fstate { white-space: nowrap; color: var(--ink-soft); font-size: 0.85rem; }
 .filelist li[data-state="sending"] .fstate,
