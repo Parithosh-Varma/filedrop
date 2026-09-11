@@ -82,7 +82,19 @@
     vbs: "script", vbe: "script", js: "script", jse: "script", wsf: "script",
     wsh: "script", jar: "executable", dll: "executable", sys: "executable",
     html: "web page", htm: "web page", xhtml: "web page", svg: "web page",
-    swf: "web page", xml: "web page"
+    swf: "web page", xml: "web page",
+    lnk: "shortcut", url: "shortcut", hta: "executable", inf: "executable",
+    reg: "executable", msc: "executable", cpl: "executable", ocx: "executable",
+    sct: "script", wsc: "script", jnlp: "executable", psm1: "script",
+    iso: "disk image", img: "disk image", vhd: "disk image", dmg: "disk image",
+    pkg: "installer", apk: "installer", msix: "installer", appx: "installer",
+    cab: "installer", msu: "installer", msp: "installer",
+    sh: "script", bash: "script", run: "executable", bin: "executable",
+    elf: "executable", app: "executable", command: "script",
+    mjs: "script", cjs: "script", py: "script", rb: "script",
+    pl: "script", php: "script", docm: "macro", xlsm: "macro",
+    pptm: "macro", mht: "web page", mhtml: "web page",
+    zip: "archive", "7z": "archive", rar: "archive"
   };
 
   // ---------- tabs ----------
@@ -158,11 +170,12 @@
     try { revokeBlobUrlsIn(document.getElementById("vault-list")); } catch (e) {}
     recvConns = [];
     rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0;
-    pendingBytes = 0;
+    pendingBytes = 0; pendingCount = 0; rfileCount = 0;
     rGrandTotal = 0; lastProgSent = 0;
     recvAborted = false;
     recvCancelNoted = false;
     if (recvStopTimer) { try { clearTimeout(recvStopTimer); } catch (e) {} recvStopTimer = null; }
+    if (doneStallTimer) { try { clearTimeout(doneStallTimer); } catch (e) {} doneStallTimer = null; }
     recvSession = "";
     recvOpfsRoot = null; recvOpfsTried = false;
     allDoneMsg = false; firstMetaSeen = false; lastRecvUi = 0;
@@ -272,9 +285,19 @@
     // eslint-disable-next-line no-control-regex
     s = s.replace(/[\x00-\x1f\x7f]/g, "_");
     s = s.replace(/[‮‭‫⁦⁧⁨⁩\u202A-\u202E\u2066-\u2069]/g, "_");
+    // Zero-width / invisible: would otherwise spoof "evil\u200b.exe" past the
+    // risky-extension check and display.
+    s = s.replace(/[\u200B-\u200D\uFEFF\u00A0]/g, "_");
     s = s.replace(/[\\/:*?"<>|]/g, "_");
     s = s.replace(/^\.+/, "_");
     s = s.trim() || "file";
+    // Windows strips trailing dots/spaces on save, turning "evil.exe. " into
+    // "evil.exe" — strip them here so riskyKind sees the real extension.
+    s = s.replace(/[. ]+$/, "") || "file";
+    // Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9).
+    if (/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?$/i.test(s)) s = "_" + s;
+    // Leading dash confuses shells when the download is opened from CLI.
+    if (/^-/.test(s)) s = "_" + s;
     if (s.length > MAX_NAME_LEN) {
       var dot = s.lastIndexOf(".");
       if (dot > 0 && s.length - dot <= 16) s = s.slice(0, MAX_NAME_LEN - (s.length - dot)) + s.slice(dot);
@@ -609,6 +632,10 @@
       if (typeof qrcode === "undefined") throw new Error("qr lib missing");
       if (!/^https?:/.test(link) && link.indexOf("file:") !== 0) throw new Error("bad link");
       if (link.length > 512) throw new Error("link too long for QR");
+      // Verify the encoded link actually carries this batch's 12-char code —
+      // a compromised vendored lib swapping payloads would otherwise leak or
+      // misdirect the claim without any visible sign.
+      if (!/[?&]code=[A-Z0-9]{12}/.test(link)) throw new Error("qr code mismatch");
       var gen = qrcode(0, "M");
       gen.addData(link);
       gen.make();
@@ -714,7 +741,14 @@
   fi.addEventListener("change", function () { if (fi.files.length) startSend(fi.files); });
 
   function openSendConns() {
-    return sendConns.filter(connOpen);
+    // Skip connections already proven dead (every send throws): striping and
+    // control retry must use channels that can actually flush. A conn that
+    // throws persistently is dead for our purposes even if 'open' still says
+    // otherwise; when none remain, the honest-halt path takes over.
+    return sendConns.filter(function (c) { return connOpen(c) && !c._fdDead; });
+  }
+  function markConnDead(c) {
+    try { c._fdDead = true; } catch (e) {}
   }
   function inflightBytes() {
     var s = 0, cons = openSendConns();
@@ -1128,14 +1162,34 @@
     return false;
   }
 
+  function gateSr(id, msg, pct) {
+    try {
+      var el = document.getElementById(id);
+      if (!el) return;
+      // Progress ticks at ~7Hz would flood screen readers: silence them,
+      // announce only terminal states (Done/errors/stops).
+      var terminal = pct === 100 ||
+        /done|confirmed receipt|stopped|failed|could not|expired|too many|enter the|that |check the|stalled|transfer ended/i.test(msg || "");
+      el.setAttribute("aria-live", terminal ? "polite" : "off");
+    } catch (e) {}
+  }
+
   function setSend(pct, msg) {
     document.getElementById("send-progress").value = pct;
     document.getElementById("send-pct").textContent = pct.toFixed(0) + "%";
-    if (msg) document.getElementById("send-status").textContent = msg;
+    if (msg) {
+      gateSr("send-status", msg, pct);
+      document.getElementById("send-status").textContent = msg;
+    }
   }
 
   function clearSendAckTimer() {
     if (sendAckTimer) { try { clearTimeout(sendAckTimer); } catch (e) {} sendAckTimer = null; }
+  }
+  // Resend affordance, shown explicitly (ui.js keeps a MutationObserver as
+  // backup in case this ever fails to run).
+  function showResend() {
+    try { document.getElementById("send-again").hidden = false; } catch (e) {}
   }
   // The receiver confirmed every byte landed AND was saved to disk/blob.
   // Only now is 100% honest: before this, megabytes can still sit in SCTP
@@ -1156,6 +1210,7 @@
     var secs = Math.max(0.1, (Date.now() - (sendT0 || Date.now())) / 1000);
     setSend(100, "The other side confirmed receipt (" + fmt(sendTotalBytes) + " in " +
       secs.toFixed(1) + "s). You can close this tab.");
+    showResend();
     // Graceful teardown: the batch is durably saved on the far side, so
     // release signaling + DataConnections without touching the 100% UI.
     try {
@@ -1343,6 +1398,11 @@
         sendFailCount = 0;
       } catch (e) {
         queue.unshift(item);
+        // Three strikes and the channel is out of the rotation: a truly dead
+        // conn must not keep winning the sort (its buffer reads empty), but
+        // a one-off hiccup shouldn't exile a healthy one either.
+        cons[0]._fdFails = (cons[0]._fdFails || 0) + 1;
+        if (cons[0]._fdFails >= 3) markConnDead(cons[0]);
         sendFailCount = (sendFailCount || 0) + 1;
         // Persistent send errors (e.g. payload exceeds the remote
         // maxMessageSize) would otherwise spin forever on the 80ms timer.
@@ -1393,9 +1453,23 @@
     } else fallbackCopy(el);
   }
   function fallbackCopy(el) {
+    // <code>/<span> have no .select(): use a temp textarea so copy works on
+    // plain-http too (navigator.clipboard needs secure contexts).
     try {
-      if (el.select) el.select();
+      if (el && el.select && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) {
+        el.select();
+        document.execCommand("copy");
+        return;
+      }
+      var ta = document.createElement("textarea");
+      ta.value = el ? el.textContent : "";
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
       document.execCommand("copy");
+      document.body.removeChild(ta);
     } catch (e) {}
   }
   document.getElementById("copy-code").onclick = function () { copyText("share-code"); };
@@ -1414,9 +1488,12 @@
   // counters, rows, or vault.
   var recvGen = 0;
   var allDoneMsg = false, firstMetaSeen = false, lastRecvUi = 0;
+  var doneStallTimer = null;
   var recvAttempts = [];
   var recvAborted = false;
   var pendingBytes = 0; // bytes parked in per-file `pending` (pre-meta/writer)
+  var pendingCount = 0; // chunk descriptors parked (O(1) bound checks)
+  var rfileCount = 0; // entries in rfiles (O(1) cap checks, no per-chunk enumeration)
   var recvCancelNoted = false, recvStopTimer = null;
 
   document.getElementById("receive-form").addEventListener("submit", function (e) {
@@ -1482,6 +1559,7 @@
   }
 
   function setRecv(msg, pct) {
+    gateSr("receive-status", msg, pct == null ? -1 : pct);
     document.getElementById("receive-status").textContent = msg;
     var bar = document.getElementById("receive-progress");
     if (pct == null) return;
@@ -1570,7 +1648,7 @@
     }
     recvConns = [];
     rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0; t0r = Date.now();
-    pendingBytes = 0;
+    pendingBytes = 0; pendingCount = 0; rfileCount = 0;
     // New code = new transfer = clean slate. Same-code reconnects keep the
     // vault ("finished files are kept below") — only the row list resets.
     if (code !== lastCode) clearHistory();
@@ -1578,6 +1656,7 @@
     recvAborted = false;
     recvCancelNoted = false;
     if (recvStopTimer) { try { clearTimeout(recvStopTimer); } catch (e0) {} recvStopTimer = null; }
+    if (doneStallTimer) { try { clearTimeout(doneStallTimer); } catch (e0) {} doneStallTimer = null; }
     recvSession = Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
     recvOpfsRoot = null; recvOpfsTried = false;
     rGrandTotal = 0; lastProgSent = 0;
@@ -1624,6 +1703,7 @@
     recvAborted = true;
     recvGen++;
     hideSas();
+    if (doneStallTimer) { try { clearTimeout(doneStallTimer); } catch (e) {} doneStallTimer = null; }
     cleanupRecvOpfs();
     try { for (var i = 0; i < recvConns.length; i++) { try { recvConns[i].close(); } catch (e) {} } } catch (e) {}
     try { if (recvPeer) recvPeer.destroy(); } catch (e) {}
@@ -1640,6 +1720,7 @@
   function onSenderCancelled() {
     if (recvAborted) return;
     recvCancelNoted = true;
+    hideSas();
     document.getElementById("receive-progress").classList.remove("busy");
     var keys = Object.keys(rfiles);
     var pending = keys.some(function (k) { return !rfiles[k].complete; });
@@ -1661,6 +1742,7 @@
   function onRecvDead() {
     if (recvAborted) return;
     if (recvConns.some(connOpen)) return;
+    hideSas();
     document.getElementById("receive-progress").classList.remove("busy");
     var keys = Object.keys(rfiles);
     var pending = keys.some(function (k) { return !rfiles[k].complete; });
@@ -1681,9 +1763,7 @@
   }
 
   function pendingTotal() {
-    var n = 0, keys = Object.keys(rfiles);
-    for (var i = 0; i < keys.length; i++) n += Object.keys(rfiles[keys[i]].pending).length;
-    return n;
+    return pendingCount;
   }
 
   // Receive epoch (see recvGen): stale-entry guard used by continuations.
@@ -1699,7 +1779,7 @@
       abortRecv("Transfer stopped: too many files (max " + MAX_FILES + ").");
       return null;
     }
-    if (Object.keys(rfiles).length >= MAX_FILES && !rfiles[fidx]) {
+    if (rfileCount >= MAX_FILES && !rfiles[fidx]) {
       abortRecv("Transfer stopped: too many files (max " + MAX_FILES + ").");
       return null;
     }
@@ -1717,6 +1797,7 @@
         opfsReady: null, writeChain: Promise.resolve()
       };
       rfiles[fidx] = f;
+      rfileCount++;
     }
     return f;
   }
@@ -1804,6 +1885,7 @@
       var i = Number(keys[k]);
       var buf = f.pending[i];
       delete f.pending[i];
+      pendingCount = Math.max(0, pendingCount - 1);
       pendingBytes = Math.max(0, pendingBytes - buf.byteLength);
       storeChunk(f, i, buf);
       if (recvAborted) return;
@@ -1822,9 +1904,11 @@
       abortRecv("Transfer stopped: sender sent too much early data.");
       return;
     }
-    // Overwrite of the same index must not double-count bytes.
+    // Overwrite of the same index must not double-count bytes/descriptors.
     if (f.pending[i]) {
       pendingBytes = Math.max(0, pendingBytes - f.pending[i].byteLength);
+    } else {
+      pendingCount++;
     }
     pendingBytes += payload.byteLength;
     f.pending[i] = payload;
@@ -1855,6 +1939,8 @@
         }
         if (f.pending[i]) {
           pendingBytes = Math.max(0, pendingBytes - f.pending[i].byteLength);
+        } else {
+          pendingCount++;
         }
         f.pending[i] = payload;
         return;
@@ -1977,7 +2063,7 @@
     if (!Number.isFinite(d.fn) || Math.floor(d.fn) !== d.fn || d.fn < 1 || d.fn > MAX_FILE_INDEX + 1) return "bad file count";
     if (d.fn > MAX_FILES) return "too many files (max " + MAX_FILES + ")";
     if (typeof d.name !== "string" || d.name.length < 1 || d.name.length > 512) return "bad file name";
-    if (typeof d.size !== "number" || !(d.size >= 0) || d.size > MAX_FILE_SIZE) return "file too large (max " + fmt(MAX_FILE_SIZE) + ")";
+    if (typeof d.size !== "number" || !Number.isFinite(d.size) || Math.floor(d.size) !== d.size || d.size < 0 || d.size > MAX_FILE_SIZE) return "file too large (max " + fmt(MAX_FILE_SIZE) + ")";
     if (!Number.isFinite(d.total) || Math.floor(d.total) !== d.total || d.total < 1 || d.total > MAX_CHUNKS_PER_FILE) return "bad chunk count";
     if (!Number.isFinite(d.chunk) || Math.floor(d.chunk) !== d.chunk || d.chunk < MIN_CHUNK || d.chunk > MAX_CHUNK) return "bad chunk size";
     if (d.mime != null && (typeof d.mime !== "string" || d.mime.length > MAX_MIME_LEN)) return "bad file type";
@@ -2023,6 +2109,10 @@
       fillRow(f, { name: f.meta.name, size: f.meta.size });
       if (!firstMetaSeen) {
         firstMetaSeen = true;
+        // Proven live sender: stop charging the spam budget (flaky-network
+        // reconnects shouldn't burn it). Guessing/brute force is infeasible
+        // against 12-char codes regardless.
+        recvAttempts = [];
         document.getElementById("receive-progress").classList.remove("busy");
       }
       pokeLive("receive");
@@ -2099,7 +2189,11 @@
   function finishMemoryFile(f) {
     if (!entryLive(f)) return;
     f.complete = true;
-    var blob = new Blob(f.chunks || [], { type: f.meta.mime });
+    // Force a safe download type for risky payloads: an attacker mime of
+    // text/html + .svg would otherwise render in the blob: origin (which
+    // inherits filedrop origin) if the user middle-clicks/drags the link.
+    var blobType = riskyKind(f.meta.name) ? "application/octet-stream" : f.meta.mime;
+    var blob = new Blob(f.chunks || [], { type: blobType });
     f.chunks = null;
     finishWithBlob(f, blob);
     maybeFinishAll();
@@ -2124,10 +2218,20 @@
     // silent drive-by drops are a malware vector.
   }
 
+  function armDoneStall() {
+    if (doneStallTimer || recvAborted) return;
+    doneStallTimer = setTimeout(function () {
+      doneStallTimer = null;
+      if (recvAborted || !allDoneMsg || recvAllComplete()) return;
+      try { document.getElementById("receive-reconnect").hidden = false; } catch (e) {}
+      setRecv("Transfer stalled — some files never arrived. Tap Reconnect to restart the batch from the sender.");
+    }, 30000);
+  }
+
   function maybeFinishAll() {
     if (recvAborted || !allDoneMsg) return;
     var keys = Object.keys(rfiles).filter(function (k) { return rfiles[k].meta; });
-    if (rCount && keys.length !== rCount) return;
+    if (rCount && keys.length !== rCount) { armDoneStall(); return; }
     if (!keys.length) {
       // A bare {t:"done"} with no files: don't strand the tab in active state.
       setActive(false);
@@ -2136,8 +2240,9 @@
       return;
     }
     for (var i = 0; i < keys.length; i++) {
-      if (!rfiles[keys[i]].complete) return;
+      if (!rfiles[keys[i]].complete) { armDoneStall(); return; }
     }
+    if (doneStallTimer) { try { clearTimeout(doneStallTimer); } catch (e) {} doneStallTimer = null; }
     document.getElementById("receive-cancel").hidden = true;
     document.getElementById("receive-reconnect").hidden = true;
     // Confirm receipt so the sender may honestly show 100%. Best-effort and
@@ -2167,15 +2272,27 @@
   }
   // Close writers and delete temp files for the current receive session.
   // Used on abort/reconnect/reset so partial fd-* files never accumulate.
+  // Delete is chained after close resolves: removing while still locked fails
+  // silently and orphans the temp until the 7-day sweep.
   function cleanupRecvOpfs() {
     try {
       var keys = Object.keys(rfiles || {});
       for (var i = 0; i < keys.length; i++) {
-        var f = rfiles[keys[i]];
-        if (!f) continue;
-        try { if (f.writer) { try { f.writer.close().catch(function () {}); } catch (e) { try { f.writer.abort().catch(function () {}); } catch (e2) {} } } } catch (e) {}
-        f.writer = null;
-        if (f.opfsName) deleteTempOpfs(f.opfsName);
+        (function (f) {
+          if (!f) return;
+          var w = f.writer;
+          var name = f.opfsName;
+          f.writer = null;
+          f.opfsName = "";
+          if (!name) return;
+          if (w) {
+            try {
+              w.close().then(function () { deleteTempOpfs(name); }).catch(function () { deleteTempOpfs(name); });
+            } catch (e) { try { w.abort().catch(function () {}); } catch (e2) {} deleteTempOpfs(name); }
+          } else {
+            deleteTempOpfs(name);
+          }
+        })(rfiles[keys[i]]);
       }
     } catch (e) {}
   }
@@ -2311,7 +2428,9 @@
     vaultOpen().then(function (db) {
       if (!db) return;
       try {
-        var req = db.transaction("files", "readonly").objectStore("files").getAll();
+        // Bound the read: eviction keeps live count near VAULT_MAX_FILES, but
+        // expired entries accumulate between prunes — cap the load.
+        var req = db.transaction("files", "readonly").objectStore("files").getAll(null, VAULT_MAX_FILES + 50);
         req.onsuccess = function () {
           var items = req.result || [];
           pruneExpiredVault(db, items);
@@ -2398,6 +2517,14 @@
     clearAllTempOpfs().then(renderVault).catch(function () {});
     try { renderVault(); } catch (e) {}
   };
+  // Opting into ephemeral mode mid-transfer deletes what was already vaulted —
+  // otherwise earlier files stay on disk despite "Don't keep files".
+  try {
+    var vaultOffBox = document.getElementById("vault-off");
+    if (vaultOffBox) vaultOffBox.addEventListener("change", function () {
+      if (vaultOffBox.checked) clearHistory();
+    });
+  } catch (e) {}
   renderVault();
   sweepOldTempOpfs();
 
@@ -2424,6 +2551,14 @@
       document.getElementById("receive-code").focus();
     } catch (e) {}
     if (/[?&]auto=1/.test(location.search)) {
+      // Strip the auto flag (keep the code for manual reloads) so a refresh
+      // never loops into another auto-connect, and warn that link-open ==
+      // connect: only download files you expected.
+      try {
+        var clean = location.pathname + "?code=" + m[1].toUpperCase().slice(0, 12);
+        history.replaceState(null, "", clean);
+      } catch (e) {}
+      try { toast("Auto-connected via shared link — only download files you expected.", "info"); } catch (e) {}
       setTimeout(submitReceive, 400);
     }
   })();
