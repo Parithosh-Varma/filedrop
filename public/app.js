@@ -326,6 +326,7 @@
     setActive(true);
     pokeLive("send");
     pump(files, rows).catch(function (err) {
+      setActive(false);
       if (!sendCancelled && sendAlive) {
         document.getElementById("send-status").textContent =
           "Send failed: " + ((err && err.message) || err);
@@ -499,9 +500,11 @@
   document.getElementById("copy-link").onclick = function () { copyText("share-link"); };
 
   // ---------- RECEIVER ----------
-  var recvPeer = null, recvConn = null;
-  var rfiles = [], cur = -1, rTotalBytes = 0, rDoneBytes = 0, t0r = 0, rCount = 0;
+  var recvPeer = null, recvConns = [];
+  var rfiles = {}, rTotalBytes = 0, rDoneBytes = 0, t0r = 0, rCount = 0;
   var lastCode = null;
+  var recvSession = "", recvOpfsRoot = null, recvOpfsTried = false;
+  var allDoneMsg = false, firstMetaSeen = false, lastRecvUi = 0;
 
   document.getElementById("receive-form").addEventListener("submit", function (e) {
     e.preventDefault();
@@ -517,7 +520,7 @@
     }
   };
   document.getElementById("receive-cancel").onclick = function () {
-    try { if (recvConn) recvConn.close(); } catch (e) {}
+    try { for (var i = 0; i < recvConns.length; i++) recvConns[i].close(); } catch (e) {}
     try { if (recvPeer) recvPeer.destroy(); } catch (e) {}
     setActive(false);
     setRecv("Stopped.");
@@ -532,10 +535,32 @@
     document.getElementById("receive-pct").textContent = pct.toFixed(0) + "%";
   }
 
+  function setRecvThrottled(msg, pct, force) {
+    var now = Date.now();
+    if (!force && now - lastRecvUi < UI_MS) return;
+    lastRecvUi = now;
+    if (pct < 100) pokeLive("receive");
+    setRecv(msg, pct);
+  }
+
+  function recvProgressMsg() {
+    var el = Math.max(0.1, (Date.now() - t0r) / 1000);
+    var denom = Math.max(rTotalBytes, rDoneBytes, 1);
+    return {
+      msg: "Receiving… " + fmt(Math.min(denom, rDoneBytes)) + " / " + fmt(rTotalBytes || rDoneBytes) +
+        " (" + fmt(rDoneBytes / el) + "/s)",
+      pct: rTotalBytes ? (rDoneBytes / rTotalBytes) * 100 : 100
+    };
+  }
+
   function connectRecv(code) {
     try { if (recvPeer) recvPeer.destroy(); } catch (e) {}
-    rfiles = []; cur = -1; rTotalBytes = 0; rDoneBytes = 0; rCount = 0; t0r = Date.now();
+    recvConns = [];
+    rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0; t0r = Date.now();
     lastCode = code;
+    recvSession = Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
+    recvOpfsRoot = null; recvOpfsTried = false;
+    allDoneMsg = false; firstMetaSeen = false; lastRecvUi = 0;
     document.getElementById("receive-filelist").innerHTML = "";
     document.getElementById("receive-cancel").hidden = false;
     document.getElementById("receive-progress").classList.add("busy");
@@ -544,25 +569,20 @@
 
     recvPeer = new Peer({ debug: 0 });
     recvPeer.on("open", function () {
-      recvConn = recvPeer.connect(PREFIX + code, { reliable: true });
-      recvConn.on("open", function () { setRecv("Connected — waiting for the first file…", 0); });
-      recvConn.on("data", onData);
-      recvConn.on("close", function () {
-        document.getElementById("receive-progress").classList.remove("busy");
-        var pending = rfiles.some(function (f) { return !f.complete; });
-        if (cur < 0 || pending) {
-          setActive(false);
-          rfiles.forEach(function (f) {
-            if (!f.complete) {
-              f.li.querySelector(".fstate").textContent = "stopped";
-              f.li.setAttribute("data-state", "stopped");
-            }
+      var opened = 0;
+      for (var k = 0; k < NUM_CHANNELS; k++) {
+        (function (k) {
+          var conn = recvPeer.connect(PREFIX + code, { reliable: true, label: "filedrop-v2-d" + k });
+          recvConns.push(conn);
+          conn.on("open", function () {
+            opened++;
+            if (opened === 1) setRecv("Connected — waiting for the first file…", 0);
           });
-          setRecv("Sender left before everything arrived. Finished files are kept below — tap Reconnect to restart the batch.");
-          document.getElementById("receive-reconnect").hidden = false;
-        }
-      });
-      recvConn.on("error", function () { setRecv("Connection error."); });
+          conn.on("data", onData);
+          conn.on("close", onRecvDead);
+          conn.on("error", function () {});
+        })(k);
+      }
     });
     recvPeer.on("error", function (err) {
       var t = (err && err.type) || "";
@@ -572,48 +592,234 @@
     });
   }
 
-  function recvRow(meta) {
+  // Honest-halt, multi-channel edition: only when every channel is down.
+  function onRecvDead() {
+    if (recvConns.some(connOpen)) return;
+    document.getElementById("receive-progress").classList.remove("busy");
+    var keys = Object.keys(rfiles);
+    var pending = keys.some(function (k) { return !rfiles[k].complete; });
+    if (!keys.length || pending) {
+      setActive(false);
+      keys.forEach(function (k) {
+        var f = rfiles[k];
+        if (!f.complete) {
+          f.li.querySelector(".fstate").textContent = "stopped";
+          f.li.setAttribute("data-state", "stopped");
+        }
+      });
+      setRecv("Sender left before everything arrived. Finished files are kept below — tap Reconnect to restart the batch.");
+      document.getElementById("receive-reconnect").hidden = false;
+    }
+  }
+
+  function ensureEntry(fidx) {
+    var f = rfiles[fidx];
+    if (!f) {
+      f = {
+        fi: fidx, meta: null, total: 0, chunk: 0,
+        chunks: null, written: {}, pending: {}, got: 0,
+        complete: false, sealing: false, fdone: false, li: recvRowPlaceholder(fidx),
+        useOpfs: false, writer: null, opfsHandle: null, opfsName: "",
+        opfsReady: null, writeChain: Promise.resolve()
+      };
+      rfiles[fidx] = f;
+    }
+    return f;
+  }
+
+  function recvRowPlaceholder(fidx) {
     var li = document.createElement("li");
     li.innerHTML = '<span class="fname"></span> <span class="bytes"></span> <span class="fstate">receiving</span>';
-    li.querySelector(".fname").textContent = meta.name;
-    li.querySelector(".bytes").textContent = fmt(meta.size);
+    li.querySelector(".fname").textContent = "File " + (fidx + 1);
+    li.querySelector(".bytes").textContent = "";
     li.setAttribute("data-state", "receiving");
     document.getElementById("receive-filelist").appendChild(li);
     return li;
   }
+  function fillRow(f, meta) {
+    f.li.querySelector(".fname").textContent = meta.name;
+    f.li.querySelector(".bytes").textContent = fmt(meta.size);
+  }
 
-  function onData(d) {
-    if (!d || !d.t) return;
-    if (d.t === "meta") {
-      rCount = d.fn;
-      rTotalBytes += d.size;
-      rfiles.push({ meta: d, chunks: new Array(d.total), got: 0, complete: false, li: recvRow(d) });
-      cur = rfiles.length - 1;
-      if (t0r === 0 || rfiles.length === 1) t0r = Date.now();
-      document.getElementById("receive-progress").classList.remove("busy");
-      pokeLive("receive");
-      setRecv("Receiving file " + (cur + 1) + " of " + d.fn + " — “" + d.name + "”…", rTotalBytes ? (rDoneBytes / rTotalBytes) * 100 : 0);
-    } else if (d.t === "data") {
-      var f = rfiles[cur];
-      if (!f || f.complete) return;
-      f.chunks[d.i] = d.buf;
-      f.got++;
-      rDoneBytes += d.buf.byteLength;
-      pokeLive("receive");
-      var el = Math.max(0.1, (Date.now() - t0r) / 1000);
-      setRecv("Receiving… " + fmt(Math.min(rTotalBytes, rDoneBytes)) + " / " + fmt(rTotalBytes) +
-        " (" + fmt(rDoneBytes / el) + "/s)", rTotalBytes ? (rDoneBytes / rTotalBytes) * 100 : 100);
-    } else if (d.t === "fdone") {
-      finishFile(rfiles[cur]);
-    } else if (d.t === "done") {
-      finishAll();
+  function getOpfsRoot() {
+    if (recvOpfsTried) return Promise.resolve(recvOpfsRoot);
+    recvOpfsTried = true;
+    try {
+      if (!(navigator.storage && navigator.storage.getDirectory)) return Promise.resolve(null);
+      return navigator.storage.getDirectory().then(function (d) {
+        recvOpfsRoot = d;
+        return d;
+      }).catch(function () { return null; });
+    } catch (e) { return Promise.resolve(null); }
+  }
+
+  // Stream-to-disk when possible (constant memory, no 2x Blob spike at the
+  // end); falls back to in-memory chunks. Early chunks wait in `pending`
+  // until the meta + writer are ready.
+  function setupOpfs(f, meta) {
+    f.opfsReady = getOpfsRoot().then(function (root) {
+      if (!root) return false;
+      f.opfsName = ("fd-" + recvSession + "-" + f.fi + "-" + sanitize(meta.name)).slice(0, 120);
+      return root.getFileHandle(f.opfsName, { create: true }).then(function (fh) {
+        f.opfsHandle = fh;
+        return fh.createWritable();
+      }).then(function (w) {
+        f.writer = w;
+        f.useOpfs = true;
+        return true;
+      }).catch(function () { return false; });
+    }).then(function (ok) {
+      if (!ok) {
+        f.useOpfs = false;
+        if (!f.chunks) f.chunks = new Array(f.total);
+      }
+      flushPending(f);
+      checkEntry(f);
+      return ok;
+    });
+    return f.opfsReady;
+  }
+
+  function flushPending(f) {
+    var keys = Object.keys(f.pending);
+    for (var k = 0; k < keys.length; k++) {
+      var i = Number(keys[k]);
+      var buf = f.pending[i];
+      delete f.pending[i];
+      storeChunk(f, i, buf);
     }
   }
 
-  function finishFile(f) {
-    if (!f || f.complete) return;
+  function storeChunk(f, i, payload) {
+    if (f.complete || f.written[i]) return;
+    if (!f.meta) { f.pending[i] = payload; return; }
+    if (f.useOpfs || (f.opfsReady && !f.chunks)) {
+      if (!f.writer) { f.pending[i] = payload; return; }
+      var pos = i * f.meta.chunk;
+      var view = new Uint8Array(payload);
+      f.writeChain = f.writeChain.then(function () {
+        return f.writer.write({ type: "write", position: pos, data: view });
+      }).then(function () {
+        f.written[i] = true;
+        f.got++;
+        rDoneBytes += payload.byteLength;
+        var p = recvProgressMsg();
+        setRecvThrottled(p.msg, p.pct, false);
+        checkEntry(f);
+      }).catch(function () {
+        if (!f.complete) {
+          f.li.querySelector(".fstate").textContent = "write failed";
+          f.li.setAttribute("data-state", "error");
+        }
+      });
+      return;
+    }
+    if (!f.chunks) f.chunks = new Array(f.total);
+    if (!f.chunks[i]) {
+      f.chunks[i] = payload;
+      f.written[i] = true;
+      f.got++;
+      rDoneBytes += payload.byteLength;
+      var p2 = recvProgressMsg();
+      setRecvThrottled(p2.msg, p2.pct, false);
+    }
+    checkEntry(f);
+  }
+
+  function onData(d) {
+    if (!d) return;
+    if (typeof ArrayBuffer !== "undefined" && d instanceof ArrayBuffer) { onBinary(d); return; }
+    if (typeof Uint8Array !== "undefined" && d instanceof Uint8Array) {
+      onBinary(d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength));
+      return;
+    }
+    if (typeof Blob !== "undefined" && d instanceof Blob) {
+      d.arrayBuffer().then(onBinary).catch(function () {});
+      return;
+    }
+    if (typeof d === "object" && d.t) onControl(d);
+  }
+
+  function onBinary(buf) {
+    if (!buf || buf.byteLength < HEADER + 1) return;
+    var dv = new DataView(buf);
+    var fidx = dv.getUint16(0);
+    var i = dv.getUint32(2);
+    var payload = buf.slice(HEADER);
+    var f = ensureEntry(fidx);
+    if (f.total && i >= f.total) return;
+    storeChunk(f, i, payload);
+  }
+
+  function onControl(d) {
+    if (d.t === "meta") {
+      var f = ensureEntry(d.fi);
+      f.meta = d;
+      f.total = d.total;
+      f.chunk = d.chunk || DEFAULT_PAYLOAD;
+      if (!rCount) rCount = d.fn;
+      rTotalBytes += d.size;
+      if (t0r === 0) t0r = Date.now();
+      fillRow(f, d);
+      if (!firstMetaSeen) {
+        firstMetaSeen = true;
+        document.getElementById("receive-progress").classList.remove("busy");
+      }
+      pokeLive("receive");
+      setRecvThrottled("Receiving file " + (d.fi + 1) + " of " + d.fn + " — “" + d.name + "”…",
+        rTotalBytes ? (rDoneBytes / rTotalBytes) * 100 : 0, true);
+      setupOpfs(f, d);
+    } else if (d.t === "fdone") {
+      var f2 = ensureEntry(d.fi);
+      f2.fdone = true;
+      checkEntry(f2);
+    } else if (d.t === "done") {
+      allDoneMsg = true;
+      maybeFinishAll();
+    }
+  }
+
+  function checkEntry(f) {
+    if (f.complete || !f.meta || !f.fdone) return;
+    if (f.got !== f.total) return;
+    if (f.useOpfs) {
+      if (!f.writer || f.sealing) return;
+      f.sealing = true;
+      // Drain outstanding positional writes before sealing the file.
+      f.writeChain.then(function () { sealOpfsFile(f); }).catch(function () {});
+      return;
+    }
+    if (f.opfsReady && !f.chunks) return; // setup still in flight
+    finishMemoryFile(f);
+  }
+
+  function sealOpfsFile(f) {
+    if (f.complete) return;
+    f.writer.truncate(f.meta.size).then(function () {
+      return f.writer.close();
+    }).then(function () {
+      return f.opfsHandle.getFile();
+    }).then(function (file) {
+      if (f.complete) return;
+      f.complete = true;
+      finishWithBlob(f, file);
+      maybeFinishAll();
+    }).catch(function () {
+      f.li.querySelector(".fstate").textContent = "write failed";
+      f.li.setAttribute("data-state", "error");
+    });
+  }
+
+  function finishMemoryFile(f) {
+    if (f.complete) return;
     f.complete = true;
-    var blob = new Blob(f.chunks, { type: f.meta.mime });
+    var blob = new Blob(f.chunks || [], { type: f.meta.mime });
+    f.chunks = null;
+    finishWithBlob(f, blob);
+    maybeFinishAll();
+  }
+
+  function finishWithBlob(f, blob) {
     saveVaultFile(f.meta, blob);
     var url = URL.createObjectURL(blob);
     var st = f.li.querySelector(".fstate");
@@ -629,12 +835,18 @@
     try { a.click(); } catch (e) {}
   }
 
-  function finishAll() {
+  function maybeFinishAll() {
+    if (!allDoneMsg) return;
+    var keys = Object.keys(rfiles);
+    if (rCount && keys.length !== rCount) return;
+    if (!keys.length) { setRecv("Transfer ended with nothing received."); return; }
+    for (var i = 0; i < keys.length; i++) {
+      if (!rfiles[keys[i]].complete) return;
+    }
     document.getElementById("receive-cancel").hidden = true;
     document.getElementById("receive-reconnect").hidden = true;
     setActive(false);
-    if (!rfiles.length) { setRecv("Transfer ended with nothing received."); return; }
-    setRecv("Done — " + plural(rfiles.length, "file", "files") +
+    setRecv("Done — " + plural(keys.length, "file", "files") +
       " received (" + fmt(rTotalBytes) + "). Copies are also saved on this device below.", 100);
   }
 

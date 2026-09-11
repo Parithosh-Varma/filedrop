@@ -31,7 +31,7 @@ No build, no test suite. Verify manually: send 1 file + batch in tab A, receive 
 ## Conventions / gotchas
 
 - Keep it dependency-free except CDN: `peerjs@1.5.4` (`unpkg`) + optional QR (`api.qrserver.com`). Link/code works without QR.
-- Signaling: public PeerJS cloud (`0.peerjs.com`); bytes are P2P only. Peer ID = `filedrop-v1-<CODE>`, code = 6 chars from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`.
+- Signaling: public PeerJS cloud (`0.peerjs.com`); bytes are P2P only. Peer ID = `filedrop-v2-<CODE>`, code = 6 chars from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`.
 - Both tabs must stay open during transfer; anyone with the code can download while sender is online. No offline/store-and-forward (would need R2 + Function).
 - CSS: `[hidden] { display: none !important }` is load-bearing (app.js toggles `hidden`). `.switch` is a segmented control — inner buttons must keep `border-radius: 0` (generic `button` radius leaks white notches into the active tab). `.ticket` grid is 3-track desktop (`auto 2px minmax(0,1fr)` stub|tear|body) → 1-column stack on mobile with horizontal `.tear`.
 - `share-link` has a `file://`/opaque-origin fallback using `location.href` base — don't remove.
