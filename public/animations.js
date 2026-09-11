@@ -191,11 +191,16 @@
   (function buttons() {
     var btns = $all("button.primary, button.ghost, button.quiet, .switch button");
     btns.forEach(function (b) {
+      // Segmented toggle must stay pixel-locked: any transform on its halves
+      // reopens hairline gaps at the rounded corners. Ripple only for those.
+      var isSwitch = !!(b.closest && b.closest(".switch"));
       // ripple
       b.addEventListener("click", function (e) {
-        b.classList.remove("fx-press");
-        void b.offsetWidth;
-        b.classList.add("fx-press");
+        if (!isSwitch) {
+          b.classList.remove("fx-press");
+          void b.offsetWidth;
+          b.classList.add("fx-press");
+        }
         try {
           var r = b.getBoundingClientRect();
           var d = Math.max(r.width, r.height) * 2;
@@ -215,8 +220,8 @@
           }
         } catch (err) {}
       });
-      // magnetic drift on fine pointers
-      if (hasGsap && finePointer) {
+      // magnetic drift on fine pointers (never on the segmented toggle)
+      if (hasGsap && finePointer && !isSwitch) {
         try {
           b.addEventListener("mousemove", function (e) {
             var r = b.getBoundingClientRect();
@@ -266,7 +271,8 @@
             if (incoming && !incoming.hidden) {
               hasGsap.fromTo(incoming, { y: 16, opacity: 0, scale: 0.985 }, { y: 0, opacity: 1, scale: 1, duration: 0.45, ease: "power3.out", overwrite: "auto", clearProps: "transform,opacity" });
             }
-            hasGsap.fromTo(t, { scale: 0.94 }, { scale: 1, duration: 0.35, ease: "back.out(2.5)", overwrite: "auto", clearProps: "transform" });
+            // No scale pop on the tab itself — transforms on the toggle halves
+            // leak hairline gaps at the rounded corners.
           } catch (e) {}
         });
       });
