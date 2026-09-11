@@ -15,7 +15,7 @@
   --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 
 body {
@@ -258,10 +258,11 @@ button.quiet:hover { color: var(--red); }
 .minilink:hover { color: #b23222; }
 
 /* ---------- qr ---------- */
-.qrwrap { margin: 1.2rem 0 0; text-align: left; }
-.qrwrap img { border: 2px solid var(--ink); border-radius: 10px; display: block; }
+.qrwrap { display: flex; align-items: center; gap: 1rem; margin: 1.2rem 0 0; }
+.qrwrap img { border: 2px solid var(--ink); border-radius: 10px; display: block; flex: none; }
+.qrwrap img[hidden] { display: none; }
 .qrwrap img[hidden] + figcaption { display: none; }
-.qrwrap figcaption { color: var(--ink-soft); font-size: 0.85rem; margin-top: 0.4rem; }
+.qrwrap figcaption { color: var(--ink-soft); font-size: 0.85rem; margin: 0; max-width: 26ch; }
 
 /* ---------- footer ---------- */
 footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: 1rem; }
