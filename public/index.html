@@ -3,68 +3,128 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FileDrop — P2P file transfer for Cloudflare Pages</title>
+<title>Filedrop — hand a file to another browser</title>
+<meta name="description" content="Browser-to-browser file transfer. Nothing is uploaded — files travel directly between two tabs." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<header>
-  <h1>📁 FileDrop</h1>
-  <p>Browser-to-browser file transfer. Static-only — deploys to Cloudflare Pages with zero config. Keep both tabs open until done.</p>
-  <nav class="tabs">
-    <button id="tab-send" class="active" type="button">Send</button>
-    <button id="tab-receive" type="button">Receive</button>
-  </nav>
-</header>
+<div class="stripe" aria-hidden="true"></div>
 
-<main>
-  <!-- SEND -->
-  <section id="view-send">
-    <div id="dropzone" class="dropzone">
-      <p><strong>Drop a file here</strong> or <label class="filelink">choose a file<input id="file-input" type="file" hidden /></label></p>
-      <small>File never touches a server — it goes directly to the receiver via WebRTC.</small>
+<div class="page">
+  <header class="masthead">
+    <div class="brand">
+      <span class="stamp" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+      </span>
+      <span class="wordmark">Filedrop</span>
     </div>
+    <p class="lede">Hand a file to another browser. Nothing is uploaded — it travels directly between your two tabs. Keep both open until it lands.</p>
+    <nav class="switch" aria-label="Choose direction">
+      <button id="tab-send" class="active" type="button" aria-pressed="true">Send</button>
+      <button id="tab-receive" type="button" aria-pressed="false">Receive</button>
+    </nav>
+  </header>
 
-    <div id="send-panel" hidden>
-      <p>File: <strong id="send-filename"></strong> (<span id="send-filesize"></span>)</p>
-      <div class="coderow">
-        <div>Share code: <code id="share-code">—</code></div>
-        <button id="copy-code" type="button">Copy code</button>
+  <main>
+    <!-- SEND -->
+    <section id="view-send" aria-label="Send a file">
+      <div id="dropzone" class="counter">
+        <svg class="counter-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 .9 8.9"/><path d="M12 12v9"/><path d="m8 16 4-4 4 4"/></svg>
+        <p class="counter-title">Drop your file here</p>
+        <p class="counter-sub">or <label class="filelink">choose a file from your device<input id="file-input" type="file" hidden /></label></p>
+        <p class="counter-note">It stays in your browser until the other side connects.</p>
       </div>
-      <div class="coderow">
-        <input id="share-link" readonly value="" />
-        <button id="copy-link" type="button">Copy link</button>
-      </div>
-      <div class="coderow">
-        <img id="share-qr" alt="QR for share link" hidden width="160" height="160" />
-      </div>
-      <p id="send-status" role="status">Waiting for receiver…</p>
-      <progress id="send-progress" max="100" value="0"></progress>
-      <span id="send-pct">0%</span>
-      <div><button id="send-cancel" type="button">Cancel</button></div>
-    </div>
-  </section>
 
-  <!-- RECEIVE -->
-  <section id="view-receive" hidden>
-    <form id="receive-form">
-      <label>Share code
-        <input id="receive-code" type="text" placeholder="e.g. K7Q2XA" autocomplete="off" spellcheck="false" />
-      </label>
-      <button type="submit">Connect &amp; download</button>
-    </form>
-    <p id="receive-status" role="status"></p>
-    <progress id="receive-progress" max="100" value="0" hidden></progress>
-    <span id="receive-pct"></span>
-    <div><a id="download-link" hidden>⬇ Download file</a></div>
-    <div><button id="receive-cancel" type="button" hidden>Cancel</button></div>
-  </section>
-</main>
+      <div id="send-panel" hidden>
+        <article class="ticket" aria-label="Claim ticket">
+          <div class="stub">
+            <span class="stub-label">Claim code</span>
+            <code id="share-code">—</code>
+            <button id="copy-code" class="ghost" type="button">Copy</button>
+          </div>
+          <div class="tear" aria-hidden="true"></div>
+          <div class="body">
+            <p class="fileline"><strong id="send-filename"></strong> <span id="send-filesize" class="bytes"></span></p>
+            <p class="hint">Give this code to the other side. They enter it under Receive.</p>
+            <div class="linkrow">
+              <input id="share-link" readonly value="" aria-label="Share link" />
+              <button id="copy-link" class="primary" type="button">Copy link</button>
+            </div>
+            <div class="progressline">
+              <progress id="send-progress" max="100" value="0"></progress>
+              <span id="send-pct" class="bytes">0%</span>
+            </div>
+            <p id="send-status" class="status" role="status">Waiting for the other side…</p>
+            <div class="actionrow">
+              <button id="send-cancel" class="quiet" type="button">Stop sending</button>
+              <button id="send-again" class="quiet" type="button" hidden>Send another file</button>
+            </div>
+          </div>
+        </article>
+        <figure class="qrwrap">
+          <img id="share-qr" alt="QR code for the share link" hidden width="148" height="148" />
+          <figcaption>Scan to open the receive side on a phone.</figcaption>
+        </figure>
+      </div>
+    </section>
 
-<footer>
-  <small>Signaling via public PeerJS cloud (0.peerjs.com). File data is peer-to-peer. No R2/KV/Functions needed. For large/offline sharing, add R2 later — see README.</small>
-</footer>
+    <!-- RECEIVE -->
+    <section id="view-receive" aria-label="Receive a file" hidden>
+      <form id="receive-form" class="claim">
+        <label class="field">Claim code
+          <input id="receive-code" type="text" placeholder="e.g. K7Q2XA" autocomplete="off" spellcheck="false" maxlength="8" />
+        </label>
+        <button type="submit" class="primary">Connect and download</button>
+        <p class="hint">Ask the sender for the 6-character code. Their tab must stay open.</p>
+      </form>
+      <p id="receive-status" class="status" role="status"></p>
+      <div class="progressline" id="receive-progressline" hidden>
+        <progress id="receive-progress" max="100" value="0"></progress>
+        <span id="receive-pct" class="bytes"></span>
+      </div>
+      <div class="actionrow">
+        <a id="download-link" class="collect" hidden>Download file</a>
+        <button id="receive-cancel" class="quiet" type="button" hidden>Stop</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Peer-to-peer over WebRTC, introduced by the public PeerJS network. No uploads, no accounts, no storage.</p>
+  </footer>
+</div>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="app.js"></script>
+<script>
+(function () {
+  // Offer a fresh counter once a send completes. app.js owns the transfer
+  // state, so a completed send is observed here and reset via reload.
+  var pct = document.getElementById("send-pct");
+  var again = document.getElementById("send-again");
+  if (!pct || !again || !("MutationObserver" in window)) return;
+  new MutationObserver(function () {
+    if (pct.textContent.trim() === "100%") again.hidden = false;
+  }).observe(pct, { childList: true, characterData: true, subtree: true });
+  again.addEventListener("click", function () { location.reload(); });
+
+  // Keep the switch honest for assistive tech (app.js owns the panels).
+  var s = document.getElementById("tab-send"), r = document.getElementById("tab-receive");
+  function sync() {
+    s.setAttribute("aria-pressed", s.classList.contains("active") ? "true" : "false");
+    r.setAttribute("aria-pressed", r.classList.contains("active") ? "true" : "false");
+  }
+  s.addEventListener("click", sync); r.addEventListener("click", sync);
+
+  // app.js toggles the receive <progress hidden>; mirror it onto the wrapper.
+  var bar = document.getElementById("receive-progress");
+  var wrap = document.getElementById("receive-progressline");
+  new MutationObserver(function () { wrap.hidden = bar.hidden; })
+    .observe(bar, { attributes: true, attributeFilter: ["hidden"] });
+})();
+</script>
 </body>
 </html>

@@ -1,20 +1,278 @@
-:root { color-scheme: light dark; }
+/* Filedrop — airmail counter aesthetic.
+   One memorable thing: par-avion stripes + perforated claim ticket.
+   Everything else is quiet paper and ink. */
+
+:root {
+  color-scheme: light;
+  --paper: #ffffff;
+  --ink: #1a2b4a;
+  --ink-soft: #4a5a78;
+  --red: #d43d2a;
+  --blue: #2456c8;
+  --counter: #f2f0ea;
+  --line: #d9d4c7;
+  --grotesk: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 * { box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 1rem; line-height: 1.5; }
-header h1 { margin-bottom: 0.2rem; }
-.tabs { display: flex; gap: 0.5rem; margin: 1rem 0; }
-.tabs button { padding: 0.5rem 1.2rem; cursor: pointer; border: 1px solid GrayText; border-radius: 8px 8px 0 0; background: transparent; }
-.tabs button.active { font-weight: bold; border-bottom: 3px solid dodgerblue; }
-.dropzone { border: 2px dashed GrayText; border-radius: 12px; padding: 2rem; text-align: center; margin: 1rem 0; }
-.dropzone.over { border-color: dodgerblue; background: rgba(30,144,255,.08); }
-.filelink { color: dodgerblue; cursor: pointer; text-decoration: underline; }
-.coderow { display: flex; gap: 0.5rem; align-items: center; margin: 0.5rem 0; flex-wrap: wrap; }
-code { font-size: 1.4rem; letter-spacing: 0.2em; padding: 0.2rem 0.6rem; border: 1px solid GrayText; border-radius: 6px; }
-input[type=text], input:not([type]) { padding: 0.5rem; font-size: 1rem; width: 100%; }
-#share-link { flex: 1; min-width: 200px; padding: 0.5rem; }
-button { padding: 0.5rem 1rem; cursor: pointer; }
-progress { width: 100%; height: 1.2rem; margin: 0.5rem 0; }
-#receive-form { display: grid; gap: 0.6rem; border: 1px solid GrayText; border-radius: 8px; padding: 1rem; }
-#receive-code { text-transform: uppercase; font-size: 1.2rem; letter-spacing: 0.15em; }
-#download-link { display: inline-block; margin-top: 1rem; padding: 0.7rem 1.4rem; border-radius: 8px; background: green; color: white; text-decoration: none; font-weight: bold; }
-footer { margin-top: 2rem; color: GrayText; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: var(--grotesk);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Full-bleed par-avion bar: the single graphic motif. */
+.stripe {
+  height: 12px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--red) 0 14px,
+    #fff 14px 28px,
+    var(--blue) 28px 42px,
+    #fff 42px 56px
+  );
+}
+
+.page { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
+
+/* ---------- masthead ---------- */
+.masthead { margin-bottom: 2rem; }
+
+.brand { display: flex; align-items: center; gap: 0.7rem; }
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--paper);
+  background: var(--red);
+  border-radius: 10px;
+}
+
+.wordmark { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; }
+
+.lede { max-width: 46ch; color: var(--ink-soft); margin: 0.9rem 0 1.6rem; }
+
+/* Segmented Send / Receive control */
+.switch {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  overflow: hidden;
+  min-width: min(100%, 340px);
+}
+
+.switch button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 500 1rem var(--grotesk);
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+}
+
+.switch button + button { border-left: 2px solid var(--ink); }
+.switch button.active { background: var(--ink); color: var(--paper); }
+
+/* ---------- send counter ---------- */
+.counter {
+  background: var(--counter);
+  border: 2px dashed var(--ink-soft);
+  border-radius: 16px;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.counter:not([hidden]) { animation: rise 0.5s ease both; }
+
+.counter.over { border-color: var(--blue); border-style: solid; background: #e9eefb; }
+.counter-icon { color: var(--blue); }
+.counter-title { font-size: 1.35rem; font-weight: 700; margin: 0.8rem 0 0.2rem; }
+.counter-sub { margin: 0; }
+.counter-note { color: var(--ink-soft); font-size: 0.9rem; margin: 0.9rem 0 0; }
+
+.filelink { color: var(--blue); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- claim ticket ---------- */
+#send-panel:not([hidden]) .ticket { animation: rise 0.45s ease both; }
+
+.ticket {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--paper);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.stub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1.25rem;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.stub-label { font-size: 0.8rem; color: #b9c3da; }
+
+#share-code {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: clamp(1.9rem, 7vw, 2.6rem);
+  letter-spacing: 0.12em;
+}
+
+.tear { border-left: 2px dashed var(--line); }
+
+.ticket .body { padding: 1.25rem 1.25rem 1.1rem; min-width: 0; }
+
+.fileline { margin: 0 0 0.2rem; overflow-wrap: anywhere; }
+.bytes { font-family: var(--mono); font-size: 0.85em; color: var(--ink-soft); }
+.hint { color: var(--ink-soft); font-size: 0.92rem; margin: 0 0 0.9rem; }
+
+.linkrow { display: flex; gap: 0.5rem; }
+.linkrow input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  background: var(--paper);
+}
+
+.progressline { display: flex; align-items: center; gap: 0.7rem; margin-top: 1rem; }
+
+progress {
+  flex: 1;
+  height: 12px;
+  appearance: none;
+  border: 1px solid var(--ink);
+  border-radius: 99px;
+  background: var(--paper);
+  overflow: hidden;
+}
+progress::-webkit-progress-bar { background: var(--paper); }
+progress::-webkit-progress-value {
+  background: repeating-linear-gradient(-45deg, var(--blue) 0 8px, var(--red) 8px 16px);
+}
+progress::-moz-progress-bar {
+  background: repeating-linear-gradient(-45deg, var(--blue) 0 8px, var(--red) 8px 16px);
+}
+
+.status { font-weight: 500; margin: 0.7rem 0 0; }
+
+.actionrow { display: flex; gap: 0.6rem; margin-top: 0.9rem; flex-wrap: wrap; }
+
+/* ---------- buttons ---------- */
+button {
+  font-family: var(--grotesk);
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--blue);
+  border: 2px solid var(--blue);
+  color: #fff;
+}
+button.primary:hover { background: #1a47a8; border-color: #1a47a8; }
+
+button.ghost {
+  background: transparent;
+  border: 1.5px solid #b9c3da;
+  color: var(--paper);
+  font-size: 0.85rem;
+  padding: 0.3rem 0.8rem;
+}
+button.ghost:hover { border-color: #fff; }
+
+button.quiet {
+  background: transparent;
+  border: 0;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0.4rem 0.2rem;
+}
+button.quiet:hover { color: var(--red); }
+
+/* ---------- receive form ---------- */
+.claim { display: grid; gap: 0.9rem; }
+
+.field { display: grid; gap: 0.35rem; font-weight: 500; }
+
+#receive-code {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 1.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  width: 100%;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.primary { justify-self: start; }
+
+.collect {
+  display: inline-block;
+  background: var(--red);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 10px;
+  padding: 0.8rem 1.5rem;
+}
+.collect:hover { background: #b23222; }
+
+/* ---------- qr ---------- */
+.qrwrap { margin: 1.2rem 0 0; text-align: left; }
+.qrwrap img { border: 2px solid var(--ink); border-radius: 10px; display: block; }
+.qrwrap img[hidden] + figcaption { display: none; }
+.qrwrap figcaption { color: var(--ink-soft); font-size: 0.85rem; margin-top: 0.4rem; }
+
+/* ---------- footer ---------- */
+footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+footer p { color: var(--ink-soft); font-size: 0.85rem; margin: 0; max-width: 60ch; }
+
+/* ---------- motion, focus, small screens ---------- */
+@keyframes rise {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+@media (max-width: 520px) {
+  .ticket { grid-template-columns: 1fr; }
+  .tear { border-left: 0; border-top: 2px dashed var(--line); }
+  .stub { padding: 1.1rem; }
+  .primary { justify-self: stretch; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .counter:not([hidden]), #send-panel:not([hidden]) .ticket { animation: none; }
+}
