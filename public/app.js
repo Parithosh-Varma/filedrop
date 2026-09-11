@@ -585,6 +585,17 @@
     } catch (e) {}
   }
 
+  // Sender-side cap violation: toast it (unmissable) + inline error state in
+  // the send view. Never the share ticket (no code exists) and never hide the
+  // dropzone — the fix is "drop fewer files", one step away.
+  function rejectBatch(msg) {
+    toast(msg, "warn");
+    var err = document.getElementById("send-error");
+    if (err) { err.textContent = msg; err.hidden = false; }
+    sendPanel.hidden = true;
+    dz.style.display = "";
+  }
+
   // ---------- SENDER ----------
   var dz = document.getElementById("dropzone");
   var fi = document.getElementById("file-input");
@@ -692,6 +703,7 @@
 
   function startSend(fileList) {
     cleanupSend();
+    try { document.getElementById("send-error").hidden = true; } catch (e) {}
     sendCancelled = false;
     sendAlive = false;
     sendComplete = false;
@@ -703,34 +715,23 @@
     // Sender-side caps (fail fast, before allocating a peer).
     if (!files.length) return;
     if (files.length > MAX_FILES) {
-      document.getElementById("send-status").textContent =
-        "Too many files (max " + MAX_FILES + "). Send in smaller batches.";
-      sendPanel.hidden = false;
-      dz.style.display = "none";
+      rejectBatch("Too many files — " + files.length + " dropped, max " + MAX_FILES + ". Send in smaller batches.");
       return;
     }
     var total = 0;
     for (var vi = 0; vi < files.length; vi++) {
       var vf = files[vi];
       if (typeof vf.size !== "number" || vf.size < 0 || vf.size > MAX_FILE_SIZE) {
-        document.getElementById("send-status").textContent =
-          "“" + (vf.name || "file") + "” is too large (max " + fmt(MAX_FILE_SIZE) + " per file).";
-        sendPanel.hidden = false;
-        dz.style.display = "none";
+        rejectBatch("“" + (vf.name || "file") + "” is too large (max " + fmt(MAX_FILE_SIZE) + " per file).");
         return;
       }
       if (String(vf.name || "").length > 512) {
-        document.getElementById("send-status").textContent = "File names must be shorter than 512 characters.";
-        sendPanel.hidden = false;
-        dz.style.display = "none";
+        rejectBatch("File names must be shorter than 512 characters.");
         return;
       }
       total += vf.size;
       if (total > MAX_TOTAL_BYTES) {
-        document.getElementById("send-status").textContent =
-          "Batch too large (max " + fmt(MAX_TOTAL_BYTES) + " total). Send fewer files.";
-        sendPanel.hidden = false;
-        dz.style.display = "none";
+        rejectBatch("Batch too large (max " + fmt(MAX_TOTAL_BYTES) + " total). Send fewer files.");
         return;
       }
     }

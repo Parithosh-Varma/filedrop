@@ -116,6 +116,17 @@ body {
 
 .filelink { color: var(--blue); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
+/* Inline batch-rejection state: red-tinted, impossible to miss, dropzone stays. */
+.send-error {
+  border: 2px solid var(--red);
+  background: #fdecea;
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  margin: 1rem 0 0;
+  font-weight: 500;
+}
+
 /* ---------- claim ticket ---------- */
 #send-panel:not([hidden]) .ticket { animation: rise 0.45s ease both; }
 
