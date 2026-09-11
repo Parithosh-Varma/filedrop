@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FileDrop — P2P file transfer for Cloudflare Pages</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header>
+  <h1>📁 FileDrop</h1>
+  <p>Browser-to-browser file transfer. Static-only — deploys to Cloudflare Pages with zero config. Keep both tabs open until done.</p>
+  <nav class="tabs">
+    <button id="tab-send" class="active" type="button">Send</button>
+    <button id="tab-receive" type="button">Receive</button>
+  </nav>
+</header>
+
+<main>
+  <!-- SEND -->
+  <section id="view-send">
+    <div id="dropzone" class="dropzone">
+      <p><strong>Drop a file here</strong> or <label class="filelink">choose a file<input id="file-input" type="file" hidden /></label></p>
+      <small>File never touches a server — it goes directly to the receiver via WebRTC.</small>
+    </div>
+
+    <div id="send-panel" hidden>
+      <p>File: <strong id="send-filename"></strong> (<span id="send-filesize"></span>)</p>
+      <div class="coderow">
+        <div>Share code: <code id="share-code">—</code></div>
+        <button id="copy-code" type="button">Copy code</button>
+      </div>
+      <div class="coderow">
+        <input id="share-link" readonly value="" />
+        <button id="copy-link" type="button">Copy link</button>
+      </div>
+      <div class="coderow">
+        <img id="share-qr" alt="QR for share link" hidden width="160" height="160" />
+      </div>
+      <p id="send-status" role="status">Waiting for receiver…</p>
+      <progress id="send-progress" max="100" value="0"></progress>
+      <span id="send-pct">0%</span>
+      <div><button id="send-cancel" type="button">Cancel</button></div>
+    </div>
+  </section>
+
+  <!-- RECEIVE -->
+  <section id="view-receive" hidden>
+    <form id="receive-form">
+      <label>Share code
+        <input id="receive-code" type="text" placeholder="e.g. K7Q2XA" autocomplete="off" spellcheck="false" />
+      </label>
+      <button type="submit">Connect &amp; download</button>
+    </form>
+    <p id="receive-status" role="status"></p>
+    <progress id="receive-progress" max="100" value="0" hidden></progress>
+    <span id="receive-pct"></span>
+    <div><a id="download-link" hidden>⬇ Download file</a></div>
+    <div><button id="receive-cancel" type="button" hidden>Cancel</button></div>
+  </section>
+</main>
+
+<footer>
+  <small>Signaling via public PeerJS cloud (0.peerjs.com). File data is peer-to-peer. No R2/KV/Functions needed. For large/offline sharing, add R2 later — see README.</small>
+</footer>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

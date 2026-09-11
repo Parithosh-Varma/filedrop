@@ -1,0 +1,20 @@
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 1rem; line-height: 1.5; }
+header h1 { margin-bottom: 0.2rem; }
+.tabs { display: flex; gap: 0.5rem; margin: 1rem 0; }
+.tabs button { padding: 0.5rem 1.2rem; cursor: pointer; border: 1px solid GrayText; border-radius: 8px 8px 0 0; background: transparent; }
+.tabs button.active { font-weight: bold; border-bottom: 3px solid dodgerblue; }
+.dropzone { border: 2px dashed GrayText; border-radius: 12px; padding: 2rem; text-align: center; margin: 1rem 0; }
+.dropzone.over { border-color: dodgerblue; background: rgba(30,144,255,.08); }
+.filelink { color: dodgerblue; cursor: pointer; text-decoration: underline; }
+.coderow { display: flex; gap: 0.5rem; align-items: center; margin: 0.5rem 0; flex-wrap: wrap; }
+code { font-size: 1.4rem; letter-spacing: 0.2em; padding: 0.2rem 0.6rem; border: 1px solid GrayText; border-radius: 6px; }
+input[type=text], input:not([type]) { padding: 0.5rem; font-size: 1rem; width: 100%; }
+#share-link { flex: 1; min-width: 200px; padding: 0.5rem; }
+button { padding: 0.5rem 1rem; cursor: pointer; }
+progress { width: 100%; height: 1.2rem; margin: 0.5rem 0; }
+#receive-form { display: grid; gap: 0.6rem; border: 1px solid GrayText; border-radius: 8px; padding: 1rem; }
+#receive-code { text-transform: uppercase; font-size: 1.2rem; letter-spacing: 0.15em; }
+#download-link { display: inline-block; margin-top: 1rem; padding: 0.7rem 1.4rem; border-radius: 8px; background: green; color: white; text-decoration: none; font-weight: bold; }
+footer { margin-top: 2rem; color: GrayText; }
