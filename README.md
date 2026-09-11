@@ -21,8 +21,14 @@ Or via dashboard: Pages → Create → Upload assets → drag `filedrop/` conten
 Local preview:
 
 ```bash
-python3 -m http.server -d filedrop 8000
+python3 -m http.server -d public 8000
 # open http://localhost:8000 — use two tabs/browsers to test send/receive
+```
+
+## Deploy
+
+```bash
+npx wrangler deploy  # assets = ./public, project = filedrop
 ```
 
 ## Limits / notes
