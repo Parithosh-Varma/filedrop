@@ -237,16 +237,33 @@ button.quiet:hover { color: var(--red); }
 
 .primary { justify-self: start; }
 
-.collect {
-  display: inline-block;
-  background: var(--red);
-  color: #fff;
-  font-weight: 700;
-  text-decoration: none;
+.filelist {
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 0.8rem 1.5rem;
+  overflow: hidden;
 }
-.collect:hover { background: #b23222; }
+.filelist:empty { display: none; }
+.filelist li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.92rem;
+}
+.filelist li + li { border-top: 1px dashed var(--line); }
+.filelist .fname { font-weight: 500; overflow-wrap: anywhere; }
+.filelist .bytes { margin-left: auto; white-space: nowrap; }
+.filelist .fstate { white-space: nowrap; color: var(--ink-soft); font-size: 0.85rem; }
+.filelist li[data-state="sending"] .fstate,
+.filelist li[data-state="receiving"] .fstate { color: var(--blue); }
+.filelist li[data-state="sent"] .fstate,
+.filelist li[data-state="done"] .fstate { color: #1e7d32; }
+
+.minilink { color: var(--red); font-weight: 700; }
+.minilink:hover { color: #b23222; }
 
 /* ---------- qr ---------- */
 .qrwrap { margin: 1.2rem 0 0; text-align: left; }

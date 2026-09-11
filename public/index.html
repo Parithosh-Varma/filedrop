@@ -21,7 +21,7 @@
       </span>
       <span class="wordmark">Filedrop</span>
     </div>
-    <p class="lede">Hand a file to another browser. Nothing is uploaded — it travels directly between your two tabs. Keep both open until it lands.</p>
+    <p class="lede">Hand files to another browser. Nothing is uploaded — they travel directly between your two tabs. Keep both open until everything lands.</p>
     <nav class="switch" aria-label="Choose direction">
       <button id="tab-send" class="active" type="button" aria-pressed="true">Send</button>
       <button id="tab-receive" type="button" aria-pressed="false">Receive</button>
@@ -33,9 +33,9 @@
     <section id="view-send" aria-label="Send a file">
       <div id="dropzone" class="counter">
         <svg class="counter-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 .9 8.9"/><path d="M12 12v9"/><path d="m8 16 4-4 4 4"/></svg>
-        <p class="counter-title">Drop your file here</p>
-        <p class="counter-sub">or <label class="filelink">choose a file from your device<input id="file-input" type="file" hidden /></label></p>
-        <p class="counter-note">It stays in your browser until the other side connects.</p>
+        <p class="counter-title">Drop your files here</p>
+        <p class="counter-sub">or <label class="filelink">choose files from your device<input id="file-input" type="file" multiple hidden /></label></p>
+        <p class="counter-note">One at a time or a whole batch — everything stays in your browser until the other side connects.</p>
       </div>
 
       <div id="send-panel" hidden>
@@ -47,7 +47,8 @@
           </div>
           <div class="tear" aria-hidden="true"></div>
           <div class="body">
-            <p class="fileline"><strong id="send-filename"></strong> <span id="send-filesize" class="bytes"></span></p>
+            <p class="fileline"><strong id="send-filecount"></strong> <span id="send-filesize" class="bytes"></span></p>
+            <ul id="send-filelist" class="filelist" aria-label="Files to send"></ul>
             <p class="hint">Give this code to the other side. They enter it under Receive.</p>
             <div class="linkrow">
               <input id="share-link" readonly value="" aria-label="Share link" />
@@ -85,8 +86,8 @@
         <progress id="receive-progress" max="100" value="0"></progress>
         <span id="receive-pct" class="bytes"></span>
       </div>
+      <ul id="receive-filelist" class="filelist" aria-label="Received files"></ul>
       <div class="actionrow">
-        <a id="download-link" class="collect" hidden>Download file</a>
         <button id="receive-cancel" class="quiet" type="button" hidden>Stop</button>
       </div>
     </section>
