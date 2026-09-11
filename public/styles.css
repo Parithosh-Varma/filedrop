@@ -608,3 +608,28 @@ footer { will-change: transform, opacity; }
 }
 .ad-tower { width: 160px; max-width: 100%; overflow: hidden; }
 .ad-tower iframe { max-width: 100%; }
+.ad-rect {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+  min-height: 250px;
+}
+.ad-rect iframe { max-width: 100%; }
+.ad-banner468 {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+  min-height: 60px;
+}
+.ad-banner468 iframe { max-width: 100%; }
+.ad-native {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+}
