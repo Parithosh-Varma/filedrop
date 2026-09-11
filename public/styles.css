@@ -115,6 +115,10 @@ body {
 .counter-note { color: var(--ink-soft); font-size: 0.9rem; margin: 0.9rem 0 0; }
 
 .filelink { color: var(--blue); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.filelink:focus-within { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+
+/* Visually hidden but keyboard-focusable (unlike `hidden`). */
+.vh-input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* Inline batch-rejection state: red-tinted, impossible to miss, dropzone stays. */
 .send-error {
@@ -218,6 +222,7 @@ progress.busy::-webkit-progress-value {
 }
 progress.busy::-moz-progress-bar {
   background: repeating-linear-gradient(-45deg, var(--line) 0 10px, #fff 10px 20px);
+  animation: slide 0.8s linear infinite;
 }
 
 /* Big readout + liveness dot: progress you can see across the room. */
@@ -261,6 +266,8 @@ button.primary {
   color: #fff;
 }
 button.primary:hover { background: #2c3f66; border-color: #2c3f66; }
+button.primary:active, button.ghost:active { filter: brightness(0.9); }
+button.quiet:active { transform: translateY(1px); }
 
 button.ghost {
   background: transparent;
@@ -384,6 +391,7 @@ footer p { color: var(--ink-soft); font-size: 0.85rem; margin: 0; max-width: 60c
   .linkrow { flex-direction: column; }
   .linkrow .primary { width: 100%; }
   .primary { justify-self: stretch; }
+  .qrwrap { flex-wrap: wrap; }
 }
 
 /* ---------- fx: GSAP + anime.js animation flood (additive, no layout changes) ---------- */
@@ -552,9 +560,57 @@ footer { will-change: transform, opacity; }
 @keyframes toast-in { from { transform: translateY(14px); opacity: 0; } }
 @keyframes toast-out { to { transform: translateY(8px); opacity: 0; } }
 
+/* ---------- ads ---------- */
+.ad-leaderboard {
+  display: flex;
+  justify-content: center;
+  margin: 2rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+  min-height: 90px;
+}
+.ad-leaderboard iframe {
+  max-width: 100%;
+}
+.ad-mobile {
+  display: none;
+  justify-content: center;
+  margin: 1.5rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+  min-height: 50px;
+}
+.ad-mobile iframe {
+  max-width: 100%;
+}
+@media (max-width: 759px) {
+  .ad-leaderboard { display: none; }
+  .ad-mobile { display: flex; }
+}
+.ad-towers {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1.5rem auto 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.ad-tower {
+  width: 160px;
+  max-width: 100%;
+  overflow: hidden;
+}
+.ad-tower iframe {
+  max-width: 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .counter:not([hidden]), #send-panel:not([hidden]) .ticket { animation: none; }
-  .live[data-live="on"] .livedot, progress.busy::-webkit-progress-value { animation: none; }
+  .live[data-live="on"] .livedot, progress.busy::-webkit-progress-value,
+  progress.busy::-moz-progress-bar { animation: none; }
+  button.quiet:active { transform: none; }
   .toast, .toast.leaving { animation: none; }
   .stripe, .orb-a, .orb-b, .orb-c,
   .filelist li.fx-enter, #vault-list li.fx-enter,

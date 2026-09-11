@@ -9,6 +9,7 @@
 <link rel="icon" href="favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="stylesheet" href="styles.css" />
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5555619941305353" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="stripe" aria-hidden="true"></div>
@@ -38,10 +39,10 @@
   <main>
     <!-- SEND -->
     <section id="view-send" aria-label="Send a file">
-      <div id="dropzone" class="counter">
+      <div id="dropzone" class="counter" role="button" tabindex="0" aria-label="Choose files to send">
         <svg class="counter-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 .9 8.9"/><path d="M12 12v9"/><path d="m8 16 4-4 4 4"/></svg>
         <p class="counter-title">Drop your files here</p>
-        <p class="counter-sub">or <label class="filelink">choose files from your device<input id="file-input" type="file" multiple hidden /></label></p>
+        <p class="counter-sub">or <label class="filelink">choose files from your device<input id="file-input" class="vh-input" type="file" multiple /></label></p>
         <p class="counter-note">One at a time or a whole batch — everything stays in your browser until the other side connects.</p>
       </div>
       <p id="send-error" class="send-error" role="alert" hidden></p>
@@ -63,12 +64,12 @@
               <button id="copy-link" class="primary" type="button">Copy link</button>
             </div>
             <div class="progressline">
-              <progress id="send-progress" max="100" value="0"></progress>
+              <progress id="send-progress" max="100" value="0" aria-label="Send progress"></progress>
               <span id="send-pct" class="bytes">0%</span>
               <span id="send-live" class="live" data-live="off"><span class="livedot" aria-hidden="true"></span>Live</span>
             </div>
             <p id="send-status" class="status" role="status">Waiting for the other side…</p>
-            <p id="send-sas" class="sas" hidden>Verify with the other side: <strong class="sas-code"></strong> — if it doesn’t match, tap Stop.</p>
+            <p id="send-sas" class="sas" role="status" hidden>Verify with the other side: <strong class="sas-code"></strong> — if it doesn’t match, tap Stop.</p>
             <div class="actionrow">
               <button id="send-cancel" class="quiet" type="button">Stop sending</button>
               <button id="send-again" class="quiet" type="button" hidden>Send another file</button>
@@ -86,15 +87,15 @@
     <section id="view-receive" aria-label="Receive a file" hidden>
       <form id="receive-form" class="claim">
         <label class="field">Claim code
-          <input id="receive-code" type="text" placeholder="K7Q2XA9M4ZD2P" autocomplete="off" spellcheck="false" maxlength="12" inputmode="latin-prose" />
+          <input id="receive-code" type="text" placeholder="K7Q2XA9M4ZD2P" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" inputmode="text" />
         </label>
         <button type="submit" class="primary">Connect</button>
         <p class="hint">Ask the sender for the 12-character code. Their tab must stay open. Only connect if you trust the sender — files must be downloaded manually, never open executables you did not expect.</p>
       </form>
       <p id="receive-status" class="status" role="status"></p>
-      <p id="receive-sas" class="sas" hidden>Verify with the sender: <strong class="sas-code"></strong> — if it doesn’t match, tap Stop.</p>
+      <p id="receive-sas" class="sas" role="status" hidden>Verify with the sender: <strong class="sas-code"></strong> — if it doesn’t match, tap Stop.</p>
       <div class="progressline" id="receive-progressline" hidden>
-        <progress id="receive-progress" max="100" value="0" hidden></progress>
+        <progress id="receive-progress" max="100" value="0" hidden aria-label="Receive progress"></progress>
         <span id="receive-pct" class="bytes"></span>
         <span id="receive-live" class="live" data-live="off"><span class="livedot" aria-hidden="true"></span>Live</span>
       </div>
@@ -113,6 +114,57 @@
       </section>
     </section>
   </main>
+
+  <div class="ad-leaderboard" aria-label="Advertisement">
+<script>
+  atOptions = {
+    'key' : '8c8686a2dc9d5959e504c518b3bafc1d',
+    'format' : 'iframe',
+    'height' : 90,
+    'width' : 728,
+    'params' : {}
+  };
+</script>
+<script src="https://www.highrevenueformat.com/8c8686a2dc9d5959e504c518b3bafc1d/invoke.js"></script>
+  </div>
+  <div class="ad-mobile" aria-label="Advertisement">
+<script>
+  atOptions = {
+    'key' : '780013ebcacc8a76ae2389250366c9af',
+    'format' : 'iframe',
+    'height' : 50,
+    'width' : 320,
+    'params' : {}
+  };
+</script>
+<script src="https://www.highrevenueformat.com/780013ebcacc8a76ae2389250366c9af/invoke.js"></script>
+  </div>
+  <div class="ad-towers" aria-label="Advertisement">
+    <div class="ad-tower">
+<script>
+  atOptions = {
+    'key' : '22ea48570d01c9f37a4d9d3c04abcb4c',
+    'format' : 'iframe',
+    'height' : 600,
+    'width' : 160,
+    'params' : {}
+  };
+</script>
+<script src="https://www.highrevenueformat.com/22ea48570d01c9f37a4d9d3c04abcb4c/invoke.js"></script>
+    </div>
+    <div class="ad-tower">
+<script>
+  atOptions = {
+    'key' : 'a357cc2919177db57003b9f3a7831102',
+    'format' : 'iframe',
+    'height' : 300,
+    'width' : 160,
+    'params' : {}
+  };
+</script>
+<script src="https://www.highrevenueformat.com/a357cc2919177db57003b9f3a7831102/invoke.js"></script>
+    </div>
+  </div>
 
   <footer>
     <p>Peer-to-peer over WebRTC, introduced by the public PeerJS network. No uploads, no accounts. Verify the sender before connecting — files are never auto-downloaded, always use the per-file Download link.</p>
