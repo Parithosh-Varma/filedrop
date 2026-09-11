@@ -78,6 +78,7 @@
   var fi = document.getElementById("file-input");
   var sendPanel = document.getElementById("send-panel");
   var sendPeer = null, sendConn = null, sendCancelled = false;
+  var sendAlive = false, sendComplete = false, sendTotalBytes = 0, sendDoneBytes = 0;
 
   dz.addEventListener("dragover", function (e) { e.preventDefault(); dz.classList.add("over"); });
   dz.addEventListener("dragleave", function () { dz.classList.remove("over"); });
@@ -103,15 +104,18 @@
   function startSend(fileList) {
     cleanupSend();
     sendCancelled = false;
+    sendAlive = false;
+    sendComplete = false;
+    sendDoneBytes = 0;
     var files = Array.prototype.slice.call(fileList);
     // Reuse the tab's code if it survived a reload; otherwise mint one.
     var code = store.get("fd-code") || code6();
     store.set("fd-code", code);
+    sendTotalBytes = files.reduce(function (a, f) { return a + f.size; }, 0);
     var peerId = PREFIX + code;
-    var totalBytes = files.reduce(function (a, f) { return a + f.size; }, 0);
 
     document.getElementById("send-filecount").textContent = plural(files.length, "file", "files");
-    document.getElementById("send-filesize").textContent = "(" + fmt(totalBytes) + " total)";
+    document.getElementById("send-filesize").textContent = "(" + fmt(sendTotalBytes) + " total)";
     var ul = document.getElementById("send-filelist");
     ul.innerHTML = "";
     var rows = files.map(function (f) {
@@ -147,13 +151,32 @@
     });
     sendPeer.on("connection", function (conn) {
       sendConn = conn;
+      sendAlive = true;
       document.getElementById("send-status").textContent = "Other side connected — sending…";
       document.getElementById("send-progress").classList.remove("busy");
-      conn.on("open", function () { setActive(true); pokeLive("send"); pump(conn, files, rows, totalBytes); });
-      conn.on("error", function () {
-        document.getElementById("send-status").textContent = "Connection lost.";
-      });
+      conn.on("open", function () { setActive(true); pokeLive("send"); pump(conn, files, rows); });
+      conn.on("close", onSendDead);
+      conn.on("error", onSendDead);
     });
+  }
+
+  // The other side is gone: freeze the pump where it stands. No fake 100%,
+  // no spinning into the void. The code is deliberately kept so a reconnect
+  // restarts the batch from zero on a fresh connection.
+  function onSendDead() {
+    if (sendComplete || sendCancelled || !sendAlive) return;
+    sendAlive = false;
+    setActive(false);
+    // Math.round matches setSend's toFixed(0), so the number never jumps back.
+    var pct = sendTotalBytes ? Math.round((sendDoneBytes / sendTotalBytes) * 100) : 0;
+    setSend(pct, "Other side disconnected — transfer stopped at " + pct +
+      "%. Ask them to tap Reconnect to restart the batch.");
+    document.getElementById("send-progress").classList.remove("busy");
+  }
+
+  function safeSend(conn, msg) {
+    try { conn.send(msg); return true; }
+    catch (e) { onSendDead(); return false; }
   }
 
   function setSend(pct, msg) {
@@ -171,11 +194,13 @@
     };
   }
 
-  function pump(conn, files, rows, totalBytes) {
+  function pump(conn, files, rows) {
     var t0 = Date.now();
+    var totalBytes = sendTotalBytes;
     var doneBytes = 0;
+    sendDoneBytes = 0;
     var fi = 0, i = 0, total = metaMsg(files[0], 0, files.length).total;
-    conn.send(metaMsg(files[0], 0, files.length));
+    if (!safeSend(conn, metaMsg(files[0], 0, files.length))) return;
     setRow(rows[0], "sending");
 
     function speed() {
@@ -183,13 +208,14 @@
       return fmt(doneBytes / el) + "/s";
     }
     function next() {
-      if (sendCancelled) return;
+      if (sendCancelled || !sendAlive) return;
       if (i >= total) {
-        conn.send({ t: "fdone" });
+        if (!safeSend(conn, { t: "fdone" })) return;
         setRow(rows[fi], "sent");
         fi++;
         if (fi >= files.length) {
-          conn.send({ t: "done" });
+          if (!safeSend(conn, { t: "done" })) return;
+          sendComplete = true;
           store.del("fd-code");
           setActive(false);
           var secs = Math.max(0.1, (Date.now() - t0) / 1000);
@@ -199,7 +225,7 @@
         }
         i = 0;
         total = metaMsg(files[fi], fi, files.length).total;
-        conn.send(metaMsg(files[fi], fi, files.length));
+        if (!safeSend(conn, metaMsg(files[fi], fi, files.length))) return;
         setRow(rows[fi], "sending");
         setTimeout(next, 0);
         return;
@@ -210,9 +236,10 @@
       var blob = file.slice(i * CHUNK, (i + 1) * CHUNK);
       var rd = new FileReader();
       rd.onload = function () {
-        if (sendCancelled) return;
-        conn.send({ t: "data", i: i, buf: rd.result });
+        if (sendCancelled || !sendAlive) return;
+        if (!safeSend(conn, { t: "data", i: i, buf: rd.result })) return;
         doneBytes += rd.result.byteLength;
+        sendDoneBytes = doneBytes;
         i++;
         pokeLive("send");
         var pct = totalBytes ? (doneBytes / totalBytes) * 100 : 100;
@@ -298,6 +325,12 @@
         var pending = rfiles.some(function (f) { return !f.complete; });
         if (cur < 0 || pending) {
           setActive(false);
+          rfiles.forEach(function (f) {
+            if (!f.complete) {
+              f.li.querySelector(".fstate").textContent = "stopped";
+              f.li.setAttribute("data-state", "stopped");
+            }
+          });
           setRecv("Sender left before everything arrived. Finished files are kept below — tap Reconnect to restart the batch.");
           document.getElementById("receive-reconnect").hidden = false;
         }
