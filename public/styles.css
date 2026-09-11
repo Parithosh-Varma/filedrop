@@ -168,6 +168,36 @@ progress::-moz-progress-bar {
   background: repeating-linear-gradient(-45deg, var(--blue) 0 8px, var(--red) 8px 16px);
 }
 
+/* Indeterminate "something is happening" shimmer while connecting. */
+progress.busy::-webkit-progress-value {
+  background: repeating-linear-gradient(-45deg, var(--line) 0 10px, #fff 10px 20px);
+  animation: slide 0.8s linear infinite;
+}
+progress.busy::-moz-progress-bar {
+  background: repeating-linear-gradient(-45deg, var(--line) 0 10px, #fff 10px 20px);
+}
+
+/* Big readout + liveness dot: progress you can see across the room. */
+#send-pct, #receive-pct { font-size: 1.5rem; font-weight: 700; color: var(--ink); }
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.livedot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--line); }
+.live[data-live="on"] { color: var(--ink); }
+.live[data-live="on"] .livedot { background: var(--red); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+@keyframes slide { to { background-position: 28px 0; } }
+
+#vault h2 { font-size: 1.05rem; margin: 1.8rem 0 0.2rem; }
+
 .status { font-weight: 500; margin: 0.7rem 0 0; }
 
 .actionrow { display: flex; gap: 0.6rem; margin-top: 0.9rem; flex-wrap: wrap; }
@@ -288,4 +318,5 @@ footer p { color: var(--ink-soft); font-size: 0.85rem; margin: 0; max-width: 60c
 
 @media (prefers-reduced-motion: reduce) {
   .counter:not([hidden]), #send-panel:not([hidden]) .ticket { animation: none; }
+  .live[data-live="on"] .livedot, progress.busy::-webkit-progress-value { animation: none; }
 }

@@ -57,6 +57,7 @@
             <div class="progressline">
               <progress id="send-progress" max="100" value="0"></progress>
               <span id="send-pct" class="bytes">0%</span>
+              <span id="send-live" class="live" data-live="off"><span class="livedot" aria-hidden="true"></span>Live</span>
             </div>
             <p id="send-status" class="status" role="status">Waiting for the other side…</p>
             <div class="actionrow">
@@ -85,11 +86,20 @@
       <div class="progressline" id="receive-progressline" hidden>
         <progress id="receive-progress" max="100" value="0"></progress>
         <span id="receive-pct" class="bytes"></span>
+        <span id="receive-live" class="live" data-live="off"><span class="livedot" aria-hidden="true"></span>Live</span>
       </div>
       <ul id="receive-filelist" class="filelist" aria-label="Received files"></ul>
       <div class="actionrow">
+        <button id="receive-reconnect" class="primary" type="button" hidden>Reconnect</button>
         <button id="receive-cancel" class="quiet" type="button" hidden>Stop</button>
       </div>
+
+      <section id="vault" aria-label="Saved on this device" hidden>
+        <h2>Saved on this device</h2>
+        <p class="hint">Finished files stay here even if you refresh or close the tab.</p>
+        <ul id="vault-list" class="filelist"></ul>
+        <button id="vault-clear" class="quiet" type="button">Clear saved files</button>
+      </section>
     </section>
   </main>
 
