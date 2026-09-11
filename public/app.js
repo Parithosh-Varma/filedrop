@@ -51,8 +51,11 @@
   // ---------- security limits ----------
   var CODE_LEN = 12;
   var CODE_TTL_MS = 30 * 60 * 1000; // sender code expires after 30 min
-  // No product cap on file count. The only ceiling is the 16-bit file index
-  // in the binary frame ([fi:uint16]) — past 65535, indexes would collide.
+  // Product cap on file count (DoS bound: each file costs a DOM row plus
+  // reassembly state). The u16 frame index is only a backstop below.
+  var MAX_FILES = 50;
+  // No index may exceed the 16-bit file index in the binary frame
+  // ([fi:uint16]) — past 65535, indexes would collide.
   var MAX_FILE_INDEX = 65535;
   var MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2 GiB per file
   var MAX_TOTAL_BYTES = 4 * 1024 * 1024 * 1024; // 4 GiB per batch
@@ -61,6 +64,7 @@
   var MAX_CHUNK = 1024 * 1024;
   var MAX_PENDING_TOTAL = 2000; // chunks buffered before meta/writer ready
   var MAX_PENDING_PER_FILE = 500;
+  var MAX_PENDING_BYTES = 32 * 1024 * 1024; // ...and never more than 32 MiB of them
   var MAX_NAME_LEN = 255;
   var MAX_MIME_LEN = 128;
   var VAULT_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
@@ -136,6 +140,7 @@
     hideSas();
     recvConns = [];
     rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0;
+    pendingBytes = 0;
     recvAborted = false;
     recvCancelNoted = false;
     if (recvStopTimer) { try { clearTimeout(recvStopTimer); } catch (e) {} recvStopTimer = null; }
@@ -715,8 +720,15 @@
     clearSendAckTimer();
     sendT0 = Date.now();
     var files = Array.prototype.slice.call(fileList);
+    // Smallest-first: cheap wins land early, and a mid-batch drop leaves the
+    // most files complete. Stable sort keeps drop order within equal sizes.
+    files.sort(function (a, b) { return (a.size || 0) - (b.size || 0); });
     // Sender-side caps (fail fast, before allocating a peer).
     if (!files.length) return;
+    if (files.length > MAX_FILES) {
+      rejectBatch("Too many files (max " + MAX_FILES + "). Send in smaller batches.");
+      return;
+    }
     var total = 0;
     for (var vi = 0; vi < files.length; vi++) {
       var vf = files[vi];
@@ -1151,6 +1163,7 @@
   var allDoneMsg = false, firstMetaSeen = false, lastRecvUi = 0;
   var recvAttempts = [];
   var recvAborted = false;
+  var pendingBytes = 0; // bytes parked in per-file `pending` (pre-meta/writer)
   var recvCancelNoted = false, recvStopTimer = null;
 
   document.getElementById("receive-form").addEventListener("submit", function (e) {
@@ -1254,6 +1267,7 @@
     hideSas();
     recvConns = [];
     rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0; t0r = Date.now();
+    pendingBytes = 0;
     // New code = new transfer = clean slate. Same-code reconnects keep the
     // vault ("finished files are kept below") — only the row list resets.
     if (code !== lastCode) clearHistory();
@@ -1371,6 +1385,10 @@
       abortRecv("Transfer stopped: invalid file index from sender.");
       return null;
     }
+    if (Object.keys(rfiles).length >= MAX_FILES && !rfiles[fidx]) {
+      abortRecv("Transfer stopped: too many files (max " + MAX_FILES + ").");
+      return null;
+    }
     var f = rfiles[fidx];
     if (!f) {
       f = {
@@ -1465,9 +1483,26 @@
       var i = Number(keys[k]);
       var buf = f.pending[i];
       delete f.pending[i];
+      pendingBytes = Math.max(0, pendingBytes - buf.byteLength);
       storeChunk(f, i, buf);
       if (recvAborted) return;
     }
+  }
+
+  // Park an early chunk (meta/writer not ready yet). Count caps stop
+  // descriptor floods; the byte cap stops RAM floods (2000 × 1 MiB would
+  // otherwise approach 2 GiB before any file header arrives).
+  function pendingPut(f, i, payload) {
+    if (Object.keys(f.pending).length >= MAX_PENDING_PER_FILE || pendingTotal() >= MAX_PENDING_TOTAL) {
+      abortRecv("Transfer stopped: sender sent data too early.");
+      return;
+    }
+    if (pendingBytes + payload.byteLength > MAX_PENDING_BYTES) {
+      abortRecv("Transfer stopped: sender sent too much early data.");
+      return;
+    }
+    pendingBytes += payload.byteLength;
+    f.pending[i] = payload;
   }
 
   function storeChunk(f, i, payload) {
@@ -1478,21 +1513,13 @@
       return;
     }
     if (!f.meta) {
-      if (Object.keys(f.pending).length >= MAX_PENDING_PER_FILE || pendingTotal() >= MAX_PENDING_TOTAL) {
-        abortRecv("Transfer stopped: sender sent data too early.");
-        return;
-      }
-      f.pending[i] = payload;
+      pendingPut(f, i, payload);
       return;
     }
     if (i >= f.total) return;
     if (f.useOpfs || (f.opfsReady && !f.chunks)) {
       if (!f.writer) {
-        if (Object.keys(f.pending).length >= MAX_PENDING_PER_FILE || pendingTotal() >= MAX_PENDING_TOTAL) {
-          abortRecv("Transfer stopped: sender sent data too early.");
-          return;
-        }
-        f.pending[i] = payload;
+        pendingPut(f, i, payload);
         return;
       }
       var pos = i * f.meta.chunk;
@@ -1587,7 +1614,9 @@
   function validMeta(d) {
     if (!d || typeof d !== "object") return "bad header";
     if (!Number.isFinite(d.fi) || Math.floor(d.fi) !== d.fi || d.fi < 0 || d.fi > MAX_FILE_INDEX) return "bad file index";
+    if (d.fi >= MAX_FILES) return "too many files (max " + MAX_FILES + ")";
     if (!Number.isFinite(d.fn) || Math.floor(d.fn) !== d.fn || d.fn < 1 || d.fn > MAX_FILE_INDEX + 1) return "bad file count";
+    if (d.fn > MAX_FILES) return "too many files (max " + MAX_FILES + ")";
     if (typeof d.name !== "string" || d.name.length < 1 || d.name.length > 512) return "bad file name";
     if (typeof d.size !== "number" || !(d.size >= 0) || d.size > MAX_FILE_SIZE) return "file too large (max " + fmt(MAX_FILE_SIZE) + ")";
     if (!Number.isFinite(d.total) || Math.floor(d.total) !== d.total || d.total < 1 || d.total > MAX_CHUNKS_PER_FILE) return "bad chunk count";
@@ -1821,7 +1850,7 @@
       if (document.getElementById("vault-off") && document.getElementById("vault-off").checked) return;
     } catch (e) {}
     var safeName = sanitizeDownloadName(meta.name);
-    if (blob.size > MAX_FILE_SIZE) return;
+    if (blob.size > VAULT_MAX_BYTES) return; // never vault huge files
     vaultOpen().then(function (db) {
       if (!db) return;
       try {
