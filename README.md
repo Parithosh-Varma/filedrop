@@ -1,5 +1,7 @@
 # FileDrop — P2P file transfer (Cloudflare Pages static-only)
 
+Live: https://fdrop.pages.dev
+
 Browser-to-browser transfer. No backend, no R2/KV/Functions, no build step.
 
 ## How it works
@@ -28,7 +30,9 @@ python3 -m http.server -d public 8000
 ## Deploy
 
 ```bash
-npx wrangler deploy  # assets = ./public, project = filedrop
+npx wrangler deploy  # assets = ./public, worker = filedrop (workers.dev)
+# classic Pages (pages.dev domain) — project must already exist:
+npx wrangler pages deploy ./public --project-name=fdrop --force
 ```
 
 ## Limits / notes
