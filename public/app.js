@@ -7,6 +7,9 @@
  * Protocol v3 (prefix filedrop-v3-, 12-char codes). Receiver still accepts
  * v2 (filedrop-v2-, 6-char) for backwards compatibility with old links.
  *  - control (JSON objects on first open channel): meta / fdone / done
+ *  - ack (receiver -> sender, any channel): {t:"received"} once every byte
+ *    is saved; the sender shows 100% only after it (99% + waiting until
+ *    then), so "done" always means the other side actually has the files.
  *  - data (ArrayBuffer): [fi:uint16][i:uint32][payload...]
  * Chunks of a file may arrive out of order across channels; the receiver
  * reassembles by (fi, i) and only finishes a file after meta + fdone +
@@ -83,7 +86,7 @@
     viewReceive.hidden = send;
     if (!send) {
       var m = /[?&]code=([A-Za-z0-9]{4,16})/.exec(location.search);
-      if (m) document.getElementById("receive-code").value = m[1].toUpperCase().slice(0, 16);
+      if (m) document.getElementById("receive-code").value = m[1].toUpperCase();
     }
   }
   tabSend.onclick = function () { show("send"); };
@@ -139,6 +142,162 @@
     var m = /\.([A-Za-z0-9]{1,10})$/.exec(String(name || ""));
     if (!m) return null;
     return RISKY_EXTS[m[1].toLowerCase()] || null;
+  }
+
+  // ---------- sender auto-zip ----------
+  // Batches of more than ZIP_MIN_FILES totaling more than ZIP_MIN_BYTES go
+  // out as ONE STORE (uncompressed) .zip, so the receiver clicks a single
+  // download instead of one per file. STORE = no compression pass; packing
+  // runs at local disk speed after one CRC read pass. The receiver needs no
+  // changes — it just gets a file whose name ends in .zip.
+  // Bounds: the zip is itself one file, so it must fit MAX_FILE_SIZE, the
+  // zip32 32-bit fields, and the batch cap with room for container overhead.
+  var ZIP_MIN_FILES = 6;
+  var ZIP_MIN_BYTES = 1073741824; // 1 GiB total
+  var ZIP32_MAX = 4294967295;
+  var ZIP_HEADROOM = 65536;
+
+  var _crcTable = null;
+  function crc32Table() {
+    if (_crcTable) return _crcTable;
+    var t = new Uint32Array(256), c, i, j;
+    for (i = 0; i < 256; i++) {
+      c = i;
+      for (j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[i] = c >>> 0;
+    }
+    _crcTable = t;
+    return t;
+  }
+
+  // Exact on-wire size + UTF-8 names (encoded once, reused by the facade).
+  function zipPlan(files) {
+    var enc = new TextEncoder();
+    var names = files.map(function (f) { return enc.encode(String(f.name || "file")); });
+    var size = 22; // end record
+    for (var i = 0; i < files.length; i++) {
+      var nl = names[i].length;
+      size += 30 + nl + files[i].size; // local header + name + data
+      size += 46 + nl;                 // central entry + name
+    }
+    return { names: names, size: size };
+  }
+  function zipShouldPack(files, total) {
+    if (files.length < ZIP_MIN_FILES || total < ZIP_MIN_BYTES) return null;
+    var plan = zipPlan(files);
+    if (plan.size > MAX_FILE_SIZE || plan.size > ZIP32_MAX) return null;
+    if (plan.size + ZIP_HEADROOM > MAX_TOTAL_BYTES) return null;
+    return plan;
+  }
+
+  // CRC read pass (chunked, async). Headers carry real CRC/sizes (no data
+  // descriptors) for maximum unzip compatibility.
+  function packZipFiles(files, statusEl, done) {
+    var table = crc32Table();
+    var crcs = new Array(files.length);
+    var fi = 0;
+    function nextFile() {
+      if (sendCancelled) return;
+      if (fi >= files.length) { done(crcs); return; }
+      var f = files[fi];
+      statusEl.textContent = "Packing file " + (fi + 1) + " of " + files.length + " into one zip…";
+      if (!f.size) { crcs[fi] = 0; fi++; setTimeout(nextFile, 0); return; }
+      var crc = 0xFFFFFFFF, off = 0;
+      (function stride() {
+        if (sendCancelled) return;
+        var end = Math.min(off + 2097152, f.size);
+        f.slice(off, end).arrayBuffer().then(function (buf) {
+          if (sendCancelled) return;
+          var b = new Uint8Array(buf), i;
+          for (i = 0; i < b.length; i++) crc = table[(crc ^ b[i]) & 0xFF] ^ (crc >>> 8);
+          off = end;
+          if (off < f.size) setTimeout(stride, 0);
+          else { crcs[fi] = (crc ^ 0xFFFFFFFF) >>> 0; fi++; setTimeout(nextFile, 0); }
+        }).catch(function () {
+          setActive(false);
+          statusEl.textContent = "Could not read “" + String(f.name || "file").slice(0, 80) + "” while packing.";
+        });
+      })();
+    }
+    nextFile();
+  }
+
+  // Static-segment facade: quacks like a File ({name,size,type,slice}) so the
+  // pump sends it untouched. Zero-copy: data segments reference the originals.
+  function makeZipFacade(files, names, crcs, zipName, packedCount) {
+    function field(n) { var b = new ArrayBuffer(n); return { b: b, v: new DataView(b) }; }
+    var segs = [];
+    var central = [];
+    var offset = 0, i, nl;
+    for (i = 0; i < files.length; i++) {
+      nl = names[i].length;
+      var lh = field(30), L = lh.v;
+      L.setUint32(0, 0x04034b50, true);
+      L.setUint16(4, 20, true);
+      L.setUint16(6, 0x0800, true); // UTF-8 names
+      L.setUint16(8, 0, true);      // STORE
+      L.setUint16(10, 0, true);
+      L.setUint16(12, 0, true);     // DOS time/date: 1980-01-01
+      L.setUint32(14, crcs[i] >>> 0, true);
+      L.setUint32(18, files[i].size, true);
+      L.setUint32(22, files[i].size, true);
+      L.setUint16(26, nl, true);
+      L.setUint16(28, 0, true);
+      segs.push({ blob: new Blob([lh.b]), size: 30 });
+      segs.push({ blob: new Blob([names[i]]), size: nl });
+      segs.push({ blob: files[i], size: files[i].size });
+      var ch = field(46), C = ch.v;
+      C.setUint32(0, 0x02014b50, true);
+      C.setUint16(4, 20, true);
+      C.setUint16(6, 20, true);
+      C.setUint16(8, 0x0800, true);
+      C.setUint16(10, 0, true);
+      C.setUint16(12, 0, true);
+      C.setUint32(16, crcs[i] >>> 0, true);
+      C.setUint32(20, files[i].size, true);
+      C.setUint32(24, files[i].size, true);
+      C.setUint16(28, nl, true);
+      C.setUint16(30, 0, true);
+      C.setUint16(32, 0, true);
+      C.setUint16(34, 0, true);
+      C.setUint16(36, 0, true);
+      C.setUint32(38, 0, true);
+      C.setUint32(42, offset, true);
+      central.push({ blob: new Blob([ch.b]), size: 46 });
+      central.push({ blob: new Blob([names[i]]), size: nl });
+      offset += 30 + nl + files[i].size;
+    }
+    var cdSize = 0, k;
+    for (k = 0; k < central.length; k++) cdSize += central[k].size;
+    var er = field(22), E = er.v;
+    E.setUint32(0, 0x06054b50, true);
+    E.setUint16(4, 0, true);
+    E.setUint16(6, 0, true);
+    E.setUint16(8, files.length, true);
+    E.setUint16(10, files.length, true);
+    E.setUint32(12, cdSize, true);
+    E.setUint32(16, offset, true);
+    E.setUint16(20, 0, true);
+    var all = segs.concat(central);
+    all.push({ blob: new Blob([er.b]), size: 22 });
+    var totalSize = offset + cdSize + 22;
+    function sliceRange(s, e) {
+      s = Math.max(0, s);
+      e = Math.min(totalSize, e == null ? totalSize : e);
+      var parts = [], pos = 0, j, seg, a, b;
+      for (j = 0; j < all.length && pos < e; j++) {
+        seg = all[j];
+        a = Math.max(s - pos, 0);
+        b = Math.min(e - pos, seg.size);
+        if (b > a) parts.push(seg.blob.slice(a, b));
+        pos += seg.size;
+      }
+      return new Blob(parts, { type: "application/zip" });
+    }
+    return {
+      name: zipName, type: "application/zip", size: totalSize, packedCount: packedCount,
+      slice: function (s, e) { return sliceRange(s, e); }
+    };
   }
 
   // ---------- shared conn helpers ----------
@@ -288,6 +447,10 @@
   var sendPeer = null, sendConns = [], sendCancelled = false;
   var sendAlive = false, sendComplete = false, sendTotalBytes = 0, sendDoneBytes = 0;
   var pumpStarted = false;
+  // sendComplete = all bytes pushed + {t:"done"} flushed. sendAcked = the
+  // receiver confirmed every byte saved (its {t:"received"}). 100% requires
+  // BOTH; until the ack the UI parks at 99% + "waiting".
+  var sendAcked = false, sendAckTimer = null, sendT0 = 0;
   var sendOwnerPeer = null;
   var sendExpiryTimer = null;
 
@@ -348,6 +511,8 @@
     sendCancelled = true;
     pumpStarted = false;
     sendOwnerPeer = null;
+    sendAcked = false;
+    clearSendAckTimer();
     clearSendExpiry();
     try {
       for (var i = 0; i < sendConns.length; i++) { try { sendConns[i].close(); } catch (e) {} }
@@ -376,6 +541,9 @@
     sendAlive = false;
     sendComplete = false;
     sendDoneBytes = 0;
+    sendAcked = false;
+    clearSendAckTimer();
+    sendT0 = Date.now();
     var files = Array.prototype.slice.call(fileList);
     // Sender-side caps (fail fast, before allocating a peer).
     if (!files.length) return;
@@ -420,6 +588,9 @@
     sendTotalBytes = total;
     var peerId = PREFIX_V3 + code;
 
+    // Large batches go out as one zip (receiver just sees a single .zip).
+    var zipPlan = zipShouldPack(files, total);
+    if (zipPlan) { startZippedSend(files, zipPlan, code, peerId); return; }
     document.getElementById("send-filecount").textContent = plural(files.length, "file", "files");
     document.getElementById("send-filesize").textContent = "(" + fmt(sendTotalBytes) + " total)";
     var ul = document.getElementById("send-filelist");
@@ -445,17 +616,63 @@
       return li;
     });
 
+    startPeer(files, rows, code, peerId);
+  }
+
+  function shareSendUi(code) {
     document.getElementById("share-code").textContent = code;
     var link = location.origin + location.pathname + "?code=" + code;
     // file:// or sandboxed preview has opaque origin — fall back to href base
     if (!/^https?:/.test(link)) link = location.href.split("?")[0] + "?code=" + code;
     document.getElementById("share-link").value = link;
-    renderQrLocal(link);
+    // QR scans auto-start (&auto=1); the copied link stays manual.
+    renderQrLocal(link + "&auto=1");
     sendPanel.hidden = false;
     setSend(0, "Waiting for the other side… share the code or link. Expires in 30 min.");
     document.getElementById("send-progress").classList.add("busy");
     dz.style.display = "none";
+  }
 
+  function startZippedSend(files, plan, code, peerId) {
+    sendTotalBytes = plan.size;
+    var zipName = "filedrop-" + code + ".zip";
+    document.getElementById("send-filecount").textContent =
+      plural(files.length, "file", "files") + " → 1 zip";
+    document.getElementById("send-filesize").textContent = "(" + fmt(plan.size) + " zipped)";
+    var ul = document.getElementById("send-filelist");
+    ul.innerHTML = "";
+    var li = document.createElement("li");
+    var s1 = document.createElement("span"); s1.className = "fname";
+    var s2 = document.createElement("span"); s2.className = "bytes";
+    var s3 = document.createElement("span"); s3.className = "fstate"; s3.textContent = "packing…";
+    s1.textContent = zipName;
+    s2.textContent = fmt(plan.size);
+    li.appendChild(s1); li.appendChild(document.createTextNode(" "));
+    li.appendChild(s2); li.appendChild(document.createTextNode(" "));
+    li.appendChild(s3);
+    var kinds = {};
+    files.forEach(function (f) { var k = riskyKind(f.name); if (k) kinds[k] = 1; });
+    kinds = Object.keys(kinds);
+    if (kinds.length) {
+      var w = document.createElement("span"); w.className = "filewarn";
+      if (window.FDIcon) w.appendChild(window.FDIcon.el("warn"));
+      w.appendChild(document.createTextNode("contains " + kinds.join(", ") + " — packed, open the zip carefully"));
+      li.appendChild(w);
+    }
+    ul.appendChild(li);
+    // Share UI first so the other side can connect while we pack; the peer
+    // (and its expiry window) starts once the zip is ready.
+    shareSendUi(code);
+    setSend(0, "Packing " + files.length + " files into one zip…");
+    packZipFiles(files, document.getElementById("send-status"), function (crcs) {
+      if (sendCancelled) return;
+      s3.textContent = "queued";
+      var facade = makeZipFacade(files, plan.names, crcs, zipName, files.length);
+      startPeer([facade], [li], code, peerId);
+    });
+  }
+
+  function startPeer(sendFiles, rows, code, peerId) {
     // Code expiry: discard peer after TTL so brute-force window is bounded.
     clearSendExpiry();
     sendExpiryTimer = setTimeout(function () {
@@ -493,14 +710,15 @@
       } catch (e) {}
       sendAlive = true;
       // A fresh connection after a clean finish means "send it all again".
-      if (sendComplete) { sendComplete = false; pumpStarted = false; }
+      if (sendComplete) { sendComplete = false; pumpStarted = false; sendAcked = false; clearSendAckTimer(); }
       document.getElementById("send-status").textContent = "Other side connected — sending…";
       document.getElementById("send-progress").classList.remove("busy");
-      conn.on("open", function () { maybeStartPump(files, rows); });
+      conn.on("open", function () { maybeStartPump(sendFiles, rows); });
+      conn.on("data", onSendData);
       conn.on("close", onSendDead);
       conn.on("error", onSendDead);
       // Some PeerJS versions deliver 'connection' already open.
-      if (connOpen(conn)) maybeStartPump(files, rows);
+      if (connOpen(conn)) maybeStartPump(sendFiles, rows);
     });
   }
 
@@ -524,16 +742,22 @@
   // restarts the batch from zero on a fresh connection.
   function onSendDead() {
     if (openSendConns().length) return; // other channels still alive
-    if (sendComplete || sendCancelled || !sendAlive) return;
+    if (sendAcked || sendCancelled || !sendAlive) return;
     sendAlive = false;
     pumpStarted = false; // a later fresh connection restarts the pump from zero
     sendOwnerPeer = null; // release binding so the same receiver can reconnect
     setActive(false);
+    document.getElementById("send-progress").classList.remove("busy");
+    if (sendComplete && !sendAcked) {
+      // Everything was pushed but receipt was never confirmed.
+      clearSendAckTimer();
+      setSend(99, "The other side disconnected before confirming receipt — ask them to tap Reconnect to restart the batch.");
+      return;
+    }
     // Math.round matches setSend's toFixed(0), so the number never jumps back.
     var pct = sendTotalBytes ? Math.round((sendDoneBytes / sendTotalBytes) * 100) : 0;
     setSend(pct, "Other side disconnected — transfer stopped at " + pct +
       "%. Ask them to tap Reconnect to restart the batch.");
-    document.getElementById("send-progress").classList.remove("busy");
   }
 
   // Control messages go on the first open channel. Trips the honest-halt
@@ -549,6 +773,42 @@
     document.getElementById("send-progress").value = pct;
     document.getElementById("send-pct").textContent = pct.toFixed(0) + "%";
     if (msg) document.getElementById("send-status").textContent = msg;
+  }
+
+  function clearSendAckTimer() {
+    if (sendAckTimer) { try { clearTimeout(sendAckTimer); } catch (e) {} sendAckTimer = null; }
+  }
+  // The receiver confirmed every byte landed AND was saved to disk/blob.
+  // Only now is 100% honest: before this, megabytes can still sit in SCTP
+  // send buffers plus the receiver's OPFS seal. Old receivers never send
+  // this message; the timer in waitForRecvAck keeps the UI honest (99% +
+  // waiting) instead of hanging silently for them.
+  function onRecvAck() {
+    if (sendAcked || sendCancelled) return;
+    sendAcked = true;
+    clearSendAckTimer();
+    setActive(false);
+    var secs = Math.max(0.1, (Date.now() - (sendT0 || Date.now())) / 1000);
+    setSend(100, "The other side confirmed receipt (" + fmt(sendTotalBytes) + " in " +
+      secs.toFixed(1) + "s). You can close this tab.");
+  }
+  function waitForRecvAck() {
+    clearSendAckTimer();
+    // transferActive stays on: closing now can still strand in-flight bytes.
+    setSend(99, "All bytes sent — waiting for the other side to finish saving…");
+    sendAckTimer = setTimeout(function () {
+      sendAckTimer = null;
+      if (sendAcked || sendCancelled) return;
+      if (!openSendConns().length) {
+        setActive(false);
+        setSend(99, "Sent everything, but the other side left before confirming. Ask them to tap Reconnect to restart the batch.");
+      } else {
+        setSend(99, "Sent everything — still waiting for the other side's confirmation. If their tab is old, ask them whether it shows Done.");
+      }
+    }, 45000);
+  }
+  function onSendData(d) {
+    if (d && typeof d === "object" && d.t === "received") onRecvAck();
   }
 
   function metaMsg(f, idx, count, payload, total) {
@@ -588,6 +848,8 @@
     }
     function ui(pct, msg, force) {
       var now = Date.now();
+      // 100% is reserved for the receiver's confirmation (onRecvAck).
+      if (!sendAcked && pct > 99) pct = 99;
       if (!force && now - lastUi < UI_MS && pct < 100) return;
       lastUi = now;
       pokeLive("send");
@@ -666,10 +928,10 @@
     store.del("fd-code");
     store.del("fd-code-ts");
     clearSendExpiry();
-    setActive(false);
-    var secs = Math.max(0.1, (Date.now() - t0) / 1000);
-    setSend(100, "Sent " + plural(files.length, "file", "files") +
-      " (" + fmt(totalBytes) + ") in " + secs.toFixed(1) + "s (" + fmt(totalBytes / secs) + "/s). You can close this tab.");
+    // Bytes may still sit in SCTP buffers and the receiver's OPFS seal, so
+    // this parks at 99% + waiting: 100% waits for {t:"received"} (onRecvAck).
+    // transferActive stays on so closing the tab now still warns.
+    waitForRecvAck();
   }
 
   function setRow(li, state) {
@@ -704,12 +966,15 @@
 
   document.getElementById("receive-form").addEventListener("submit", function (e) {
     e.preventDefault();
+    submitReceive();
+  });
+  function submitReceive() {
     var code = document.getElementById("receive-code").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
     if (code.length < 6 || code.length > 16) { setRecv("Enter the code from the sender (6–16 characters)."); return; }
     if (!checkRecvRateLimit()) return;
     document.getElementById("receive-reconnect").hidden = true;
     connectRecv(code);
-  });
+  }
   document.getElementById("receive-reconnect").onclick = function () {
     if (lastCode) {
       if (!checkRecvRateLimit()) return;
@@ -755,13 +1020,27 @@
     setRecv(msg, pct);
   }
 
+  function recvAllComplete() {
+    if (recvAborted || !allDoneMsg) return false;
+    var keys = Object.keys(rfiles);
+    if (rCount && keys.length !== rCount) return false;
+    if (!keys.length) return false;
+    for (var i = 0; i < keys.length; i++) {
+      if (!rfiles[keys[i]].complete) return false;
+    }
+    return true;
+  }
+
   function recvProgressMsg() {
     var el = Math.max(0.1, (Date.now() - t0r) / 1000);
     var denom = Math.max(rTotalBytes, rDoneBytes, 1);
+    // rTotalBytes only counts metas seen so far: finishing file 1 of 3 would
+    // otherwise flash a bogus 100%. Cap at 99 until everything truly landed.
+    var raw = rTotalBytes ? (rDoneBytes / rTotalBytes) * 100 : 100;
     return {
       msg: "Receiving… " + fmt(Math.min(denom, rDoneBytes)) + " / " + fmt(rTotalBytes || rDoneBytes) +
         " (" + fmt(rDoneBytes / el) + "/s)",
-      pct: rTotalBytes ? (rDoneBytes / rTotalBytes) * 100 : 100
+      pct: (raw >= 100 && !recvAllComplete()) ? 99 : raw
     };
   }
 
@@ -1208,6 +1487,14 @@
     }
     document.getElementById("receive-cancel").hidden = true;
     document.getElementById("receive-reconnect").hidden = true;
+    // Confirm receipt so the sender may honestly show 100%. Best-effort and
+    // one-way: senders without a data listener (older tabs) just ignore it,
+    // and then park at 99% + waiting instead of ever faking 100%.
+    try {
+      for (var ai = 0; ai < recvConns.length; ai++) {
+        try { if (recvConns[ai] && recvConns[ai].open) recvConns[ai].send({ t: "received" }); } catch (e2) {}
+      }
+    } catch (e) {}
     setActive(false);
     setRecv("Done — " + plural(keys.length, "file", "files") +
       " received (" + fmt(rTotalBytes) + "). Use the per-file Download links above; copies are also saved on this device below.", 100);
@@ -1392,6 +1679,14 @@
   renderVault();
   sweepOldTempOpfs();
 
-  // deep-link ?code=XXX → receive tab
-  if (/[?&]code=/.test(location.search)) show("receive");
+  // deep-link ?code=XXX → receive tab; &auto=1 (QR scans) connects immediately
+  (function () {
+    var m = /[?&]code=([A-Za-z0-9]{4,16})/.exec(location.search);
+    if (!m) return;
+    show("receive");
+    if (/[?&]auto=1/.test(location.search)) {
+      document.getElementById("receive-code").value = m[1].toUpperCase();
+      setTimeout(submitReceive, 400);
+    }
+  })();
 })();
