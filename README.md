@@ -10,7 +10,7 @@ Browser-to-browser transfer. No backend, no R2/KV/Functions, no build step.
 - **Receive tab:** enter the 12-character code (or open link) → files stream in order over parallel WebRTC DataChannels (4x, ~250KB raw-binary framed chunks, event-driven backpressure) → each file is streamed to disk (OPFS, Blob fallback) with its own manual Download link (no auto-download) + executable/script warnings. Compare the 6-digit verify code with the sender over a second channel to catch a relayed connection; tick “Don’t keep files” for download-only mode.
 - Signaling via public PeerJS cloud (`0.peerjs.com`). File bytes go peer-to-peer.
 - Both tabs must stay open during transfer. Anyone with the code can download while sender is online — share only with someone you trust.
-- Security: strict CSP/HSTS/frame-ancestors via `public/_headers`, vendored `peerjs`+`qrcode` (no CDN), receiver validates all sender fields (50 files / 2 GiB per file / 4 GiB batch caps), 5-attempts/min receive rate-limit, sanitized filenames, 7-day vault expiry with OPFS sweep.
+- Security: strict CSP/HSTS/frame-ancestors via `public/_headers`, vendored `peerjs`+`qrcode` (no CDN), receiver validates all sender fields (2 GiB per file / 4 GiB batch caps), 5-attempts/min receive rate-limit, sanitized filenames, 7-day vault expiry with OPFS sweep.
 
 ## Deploy to Cloudflare Pages
 

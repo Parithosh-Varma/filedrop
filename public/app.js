@@ -51,7 +51,9 @@
   // ---------- security limits ----------
   var CODE_LEN = 12;
   var CODE_TTL_MS = 30 * 60 * 1000; // sender code expires after 30 min
-  var MAX_FILES = 100;
+  // No product cap on file count. The only ceiling is the 16-bit file index
+  // in the binary frame ([fi:uint16]) — past 65535, indexes would collide.
+  var MAX_FILE_INDEX = 65535;
   var MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2 GiB per file
   var MAX_TOTAL_BYTES = 4 * 1024 * 1024 * 1024; // 4 GiB per batch
   var MAX_CHUNKS_PER_FILE = 16384; // 2 GiB / 128 KiB headroom
@@ -293,6 +295,7 @@
     var many = files.length >= ZIP_MIN_FILES;
     var heavy = files.length >= 2 && total >= ZIP_MIN_BYTES;
     if (!many && !heavy) return null;
+    if (files.length > MAX_FILE_INDEX) return null; // zip entry counts are u16
     var plan = zipPlan(files);
     if (plan.size > MAX_FILE_SIZE || plan.size > ZIP32_MAX) return null;
     if (plan.size + ZIP_HEADROOM > MAX_TOTAL_BYTES) return null;
@@ -714,10 +717,6 @@
     var files = Array.prototype.slice.call(fileList);
     // Sender-side caps (fail fast, before allocating a peer).
     if (!files.length) return;
-    if (files.length > MAX_FILES) {
-      rejectBatch("Too many files — " + files.length + " dropped, max " + MAX_FILES + ". Send in smaller batches.");
-      return;
-    }
     var total = 0;
     for (var vi = 0; vi < files.length; vi++) {
       var vf = files[vi];
@@ -1368,16 +1367,12 @@
   }
 
   function ensureEntry(fidx) {
-    if (!Number.isFinite(fidx) || Math.floor(fidx) !== fidx || fidx < 0 || fidx >= MAX_FILES) {
+    if (!Number.isFinite(fidx) || Math.floor(fidx) !== fidx || fidx < 0 || fidx > MAX_FILE_INDEX) {
       abortRecv("Transfer stopped: invalid file index from sender.");
       return null;
     }
     var f = rfiles[fidx];
     if (!f) {
-      if (Object.keys(rfiles).length >= MAX_FILES) {
-        abortRecv("Transfer stopped: too many files (max " + MAX_FILES + ").");
-        return null;
-      }
       f = {
         fi: fidx, meta: null, total: 0, chunk: 0,
         chunks: null, written: {}, pending: {}, got: 0,
@@ -1591,8 +1586,8 @@
 
   function validMeta(d) {
     if (!d || typeof d !== "object") return "bad header";
-    if (!Number.isFinite(d.fi) || Math.floor(d.fi) !== d.fi || d.fi < 0 || d.fi >= MAX_FILES) return "bad file index";
-    if (!Number.isFinite(d.fn) || Math.floor(d.fn) !== d.fn || d.fn < 1 || d.fn > MAX_FILES) return "bad file count";
+    if (!Number.isFinite(d.fi) || Math.floor(d.fi) !== d.fi || d.fi < 0 || d.fi > MAX_FILE_INDEX) return "bad file index";
+    if (!Number.isFinite(d.fn) || Math.floor(d.fn) !== d.fn || d.fn < 1 || d.fn > MAX_FILE_INDEX + 1) return "bad file count";
     if (typeof d.name !== "string" || d.name.length < 1 || d.name.length > 512) return "bad file name";
     if (typeof d.size !== "number" || !(d.size >= 0) || d.size > MAX_FILE_SIZE) return "file too large (max " + fmt(MAX_FILE_SIZE) + ")";
     if (!Number.isFinite(d.total) || Math.floor(d.total) !== d.total || d.total < 1 || d.total > MAX_CHUNKS_PER_FILE) return "bad chunk count";
@@ -1639,7 +1634,7 @@
         rTotalBytes ? (rDoneBytes / rTotalBytes) * 100 : 0, true);
       setupOpfs(f, { name: f.meta.name, size: f.meta.size });
     } else if (d.t === "fdone") {
-      if (!Number.isFinite(d.fi) || Math.floor(d.fi) !== d.fi || d.fi < 0 || d.fi >= MAX_FILES) {
+      if (!Number.isFinite(d.fi) || Math.floor(d.fi) !== d.fi || d.fi < 0 || d.fi > MAX_FILE_INDEX) {
         abortRecv("Transfer stopped: invalid file index.");
         return;
       }
