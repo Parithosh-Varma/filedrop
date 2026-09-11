@@ -82,6 +82,13 @@
   var viewReceive = document.getElementById("view-receive");
   function show(which) {
     var send = which === "send";
+    // Switching views while idle wipes past history (never mid-transfer):
+    // the vault plus the view being left, reset to pristine.
+    if (!transferActive) {
+      clearHistory();
+      if (send) resetReceiveView();
+      else resetSendView();
+    }
     tabSend.classList.toggle("active", send);
     tabReceive.classList.toggle("active", !send);
     viewSend.hidden = !send;
@@ -93,6 +100,57 @@
   }
   tabSend.onclick = function () { show("send"); };
   tabReceive.onclick = function () { show("receive"); };
+
+  // Pristine send view: tears down an idle finished/waiting batch (peer,
+  // code, rows, share UI) so nothing stale lingers. Caller guards liveness.
+  function resetSendView() {
+    cleanupSend();
+    if (sendStopTimer) { try { clearTimeout(sendStopTimer); } catch (e) {} sendStopTimer = null; }
+    store.del("fd-code");
+    store.del("fd-code-ts");
+    setActive(false);
+    document.getElementById("send-filelist").innerHTML = "";
+    document.getElementById("send-filecount").textContent = "";
+    document.getElementById("send-filesize").textContent = "";
+    document.getElementById("share-code").textContent = "—";
+    document.getElementById("share-link").value = "";
+    var qr = document.getElementById("share-qr");
+    qr.removeAttribute("src");
+    qr.hidden = true;
+    document.getElementById("send-progress").classList.remove("busy");
+    document.getElementById("send-progress").value = 0;
+    document.getElementById("send-pct").textContent = "0%";
+    document.getElementById("send-status").textContent = "";
+    document.getElementById("send-again").hidden = true;
+    try { fi.value = ""; } catch (e) {}
+    sendPanel.hidden = true;
+    dz.style.display = "";
+  }
+
+  // Pristine receive view: tears down an idle finished/stopped batch. Keeps
+  // lastCode + the typed code so Reconnect/Connect still work right after.
+  function resetReceiveView() {
+    try { if (recvPeer) recvPeer.destroy(); } catch (e) {}
+    hideSas();
+    recvConns = [];
+    rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0;
+    recvAborted = false;
+    recvCancelNoted = false;
+    if (recvStopTimer) { try { clearTimeout(recvStopTimer); } catch (e) {} recvStopTimer = null; }
+    recvSession = "";
+    recvOpfsRoot = null; recvOpfsTried = false;
+    allDoneMsg = false; firstMetaSeen = false; lastRecvUi = 0;
+    setActive(false);
+    document.getElementById("receive-filelist").innerHTML = "";
+    document.getElementById("receive-status").textContent = "";
+    var bar = document.getElementById("receive-progress");
+    bar.classList.remove("busy");
+    bar.value = 0;
+    bar.hidden = true;
+    document.getElementById("receive-pct").textContent = "";
+    document.getElementById("receive-reconnect").hidden = true;
+    document.getElementById("receive-cancel").hidden = true;
+  }
 
   function fmt(n) {
     if (n < 1024) return n + " B";
@@ -685,6 +743,15 @@
     sendTotalBytes = total;
     var peerId = PREFIX_V3 + code;
 
+    // New batch = clean slate (only when nothing is live): drop the vault
+    // and any stale receive list from a previous transfer.
+    clearHistory();
+    if (!transferActive) {
+      document.getElementById("receive-filelist").innerHTML = "";
+      document.getElementById("receive-reconnect").hidden = true;
+      document.getElementById("receive-cancel").hidden = true;
+    }
+
     // Large batches go out as one zip (receiver just sees a single .zip).
     var zipPlan = zipShouldPack(files, total);
     if (zipPlan) { startZippedSend(files, zipPlan, code, peerId); return; }
@@ -1187,6 +1254,9 @@
     hideSas();
     recvConns = [];
     rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0; t0r = Date.now();
+    // New code = new transfer = clean slate. Same-code reconnects keep the
+    // vault ("finished files are kept below") — only the row list resets.
+    if (code !== lastCode) clearHistory();
     lastCode = code;
     recvAborted = false;
     recvCancelNoted = false;
@@ -1839,16 +1909,22 @@
     });
     sec.hidden = false;
   }
-  document.getElementById("vault-clear").onclick = function () {
+  // Wipe past history when a NEW transfer starts while idle: clears the
+  // vault (IndexedDB) and repaints. Deliberately OPFS-touch-free — another
+  // tab may be mid-receive. In-flight completions re-vault afterwards, so a
+  // live transfer is never harmed by this.
+  function clearHistory() {
     vaultOpen().then(function (db) {
-      if (db) {
-        try {
-          var tx = db.transaction("files", "readwrite");
-          tx.objectStore("files").clear();
-          tx.oncomplete = renderVault;
-        } catch (e) {}
-      }
+      if (!db) { try { renderVault(); } catch (e) {} return; }
+      try {
+        var tx = db.transaction("files", "readwrite");
+        tx.objectStore("files").clear();
+        tx.oncomplete = renderVault;
+      } catch (e) {}
     });
+  }
+  document.getElementById("vault-clear").onclick = function () {
+    clearHistory();
     clearAllTempOpfs().then(renderVault).catch(function () {});
     try { renderVault(); } catch (e) {}
   };
