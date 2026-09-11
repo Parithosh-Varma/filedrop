@@ -34,18 +34,4 @@
         .observe(bar, { attributes: true, attributeFilter: ["hidden"] });
     }
   }
-
-  // Companion ad: first dropzone interaction per session opens the sponsor
-  // Direct Link in a new tab. Runs synchronously inside the real gesture so
-  // popup blockers allow it; never preventDefault — the file picker opens
-  // normally alongside. Session-gated, storage failures never break the UI.
-  try {
-    var dz = document.getElementById("dropzone");
-    if (dz && !sessionStorage.getItem("fd-adlink")) {
-      dz.addEventListener("click", function () {
-        try { sessionStorage.setItem("fd-adlink", "1"); } catch (e) {}
-        window.open("https://www.profitableratecpmnetwork.com/dg954971g?key=2d939674709ef50262fff58454043ed6", "_blank", "noopener");
-      });
-    }
-  } catch (e) { /* ad companion must never break the UI */ }
 })();
