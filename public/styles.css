@@ -230,13 +230,13 @@ button.ghost:hover { border-color: #fff; }
 
 button.quiet {
   background: transparent;
-  border: 0;
-  color: var(--ink-soft);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  padding: 0.4rem 0.2rem;
+  border: 2px solid var(--ink-soft);
+  border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
 }
-button.quiet:hover { color: var(--red); }
+button.quiet:hover { border-color: var(--red); color: var(--red); }
 
 /* ---------- receive form ---------- */
 .claim { display: grid; gap: 0.9rem; }
