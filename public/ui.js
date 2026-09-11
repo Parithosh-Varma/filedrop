@@ -26,8 +26,12 @@
 
   var bar = document.getElementById("receive-progress");
   var wrap = document.getElementById("receive-progressline");
-  if (bar && wrap && ("MutationObserver" in window)) {
-    new MutationObserver(function () { wrap.hidden = bar.hidden; })
-      .observe(bar, { attributes: true, attributeFilter: ["hidden"] });
+  if (bar && wrap) {
+    // Initial sync (both start hidden) + mirror on change.
+    wrap.hidden = bar.hidden;
+    if ("MutationObserver" in window) {
+      new MutationObserver(function () { wrap.hidden = bar.hidden; })
+        .observe(bar, { attributes: true, attributeFilter: ["hidden"] });
+    }
   }
 })();

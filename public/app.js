@@ -740,6 +740,9 @@
     var bar = document.getElementById("receive-progress");
     if (pct == null) return;
     bar.hidden = false;
+    // Unhide wrapper directly too — do not rely solely on ui.js observer
+    // (it may load late/fail, which previously left the bar invisible).
+    try { document.getElementById("receive-progressline").hidden = false; } catch (e) {}
     bar.value = pct;
     document.getElementById("receive-pct").textContent = pct.toFixed(0) + "%";
   }
