@@ -6,8 +6,8 @@ Browser-to-browser transfer. No backend, no R2/KV/Functions, no build step.
 
 ## How it works
 
-- **Send tab:** drop one file or a whole batch → get 12-char crypto-random code + `?code=...` link + locally-generated QR. Code expires after 30 min. Only one receiver at a time while live.
-- **Receive tab:** enter code (or open link; old 6-char v2 codes still work) → files stream in order over parallel WebRTC DataChannels (4x, ~250KB raw-binary framed chunks, event-driven backpressure) → each file is streamed to disk (OPFS, Blob fallback) with its own manual Download link (no auto-download) + executable/script warnings.
+- **Send tab:** drop one file or a whole batch → get 12-char crypto-random code + `?code=...` link + locally-generated QR. Code expires after 30 min. Only one receiver at a time while live. Batches of 6+ files (any size), or 2+ files totaling 1+ GiB (and fitting the 2 GiB single-file / zip32 limits) auto-pack into one uncompressed `.zip`, so the receiver clicks a single download.
+- **Receive tab:** enter the 12-character code (or open link) → files stream in order over parallel WebRTC DataChannels (4x, ~250KB raw-binary framed chunks, event-driven backpressure) → each file is streamed to disk (OPFS, Blob fallback) with its own manual Download link (no auto-download) + executable/script warnings. Compare the 6-digit verify code with the sender over a second channel to catch a relayed connection; tick “Don’t keep files” for download-only mode.
 - Signaling via public PeerJS cloud (`0.peerjs.com`). File bytes go peer-to-peer.
 - Both tabs must stay open during transfer. Anyone with the code can download while sender is online — share only with someone you trust.
 - Security: strict CSP/HSTS/frame-ancestors via `public/_headers`, vendored `peerjs`+`qrcode` (no CDN), receiver validates all sender fields (50 files / 2 GiB per file / 4 GiB batch caps), 5-attempts/min receive rate-limit, sanitized filenames, 7-day vault expiry with OPFS sweep.

@@ -597,6 +597,7 @@
   }
   function cleanupSend() {
     sendCancelled = true;
+    hideSas();
     pumpStarted = false;
     sendOwnerPeer = null;
     sendAcked = false;
@@ -801,6 +802,10 @@
         return;
       }
       if (!sendOwnerPeer && peer) sendOwnerPeer = peer;
+      // SAS for MITM detection: both sides derive it from the same triple.
+      if (peer && sendOwnerPeer) {
+        try { showSas("send", code, peerId, sendOwnerPeer); } catch (e) {}
+      }
       sendConns.push(conn);
       try {
         if (conn.dataChannel) conn.dataChannel.bufferedAmountLowThreshold = LOW_WATERMARK;
@@ -1086,8 +1091,12 @@
     submitReceive();
   });
   function submitReceive() {
-    var code = document.getElementById("receive-code").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
-    if (code.length < 6 || code.length > 16) { setRecv("Enter the code from the sender (6–16 characters)."); return; }
+    var code = document.getElementById("receive-code").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+    if (/^[A-Z0-9]{6,8}$/.test(code)) {
+      setRecv("That looks like an old 6-character code, which is no longer supported. Ask the sender to re-share for a new 12-character code.");
+      return;
+    }
+    if (!/^[A-Z0-9]{12}$/.test(code)) { setRecv("Enter the 12-character code from the sender."); return; }
     if (!checkRecvRateLimit()) return;
     document.getElementById("receive-reconnect").hidden = true;
     connectRecv(code);
@@ -1175,6 +1184,7 @@
 
   function connectRecv(code) {
     try { if (recvPeer) recvPeer.destroy(); } catch (e) {}
+    hideSas();
     recvConns = [];
     rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0; t0r = Date.now();
     lastCode = code;
@@ -1194,6 +1204,8 @@
     recvPeer = new Peer({ debug: 0 });
     recvPeer.on("open", function () {
       if (recvAborted) return;
+      // SAS for MITM detection (sender shows the same value).
+      try { showSas("receive", code, prefix + code, recvPeer.id); } catch (e) {}
       var opened = 0;
       for (var k = 0; k < NUM_CHANNELS; k++) {
         (function (k) {
@@ -1222,6 +1234,7 @@
   function abortRecv(msg) {
     if (recvAborted) return;
     recvAborted = true;
+    hideSas();
     try { for (var i = 0; i < recvConns.length; i++) { try { recvConns[i].close(); } catch (e) {} } } catch (e) {}
     try { if (recvPeer) recvPeer.destroy(); } catch (e) {}
     setActive(false);
@@ -1737,6 +1750,10 @@
     });
   }
   function saveVaultFile(meta, blob) {
+    try {
+      // Ephemeral mode: user opted out of on-device persistence.
+      if (document.getElementById("vault-off") && document.getElementById("vault-off").checked) return;
+    } catch (e) {}
     var safeName = sanitizeDownloadName(meta.name);
     if (blob.size > MAX_FILE_SIZE) return;
     vaultOpen().then(function (db) {
@@ -1840,7 +1857,7 @@
 
   // deep-link ?code=XXX → receive tab; &auto=1 (QR scans) connects immediately
   (function () {
-    var m = /[?&]code=([A-Za-z0-9]{4,16})/.exec(location.search);
+    var m = /[?&]code=([A-Za-z0-9]{6,16})/.exec(location.search);
     if (!m) return;
     show("receive");
     if (/[?&]auto=1/.test(location.search)) {
