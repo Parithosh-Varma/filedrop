@@ -7,7 +7,7 @@ Browser-to-browser transfer. No backend, no R2/KV/Functions, no build step.
 ## How it works
 
 - **Send tab:** drop one file or a whole batch → get 6-char code + `?code=XXXXXX` link + QR.
-- **Receive tab:** enter code (or open link) → files stream in order over one WebRTC DataChannel (64KB chunks, backpressure-aware) → each file gets its own download link with auto-download attempted.
+- **Receive tab:** enter code (or open link) → files stream in order over parallel WebRTC DataChannels (4x, ~250KB raw-binary framed chunks, event-driven backpressure) → each file is streamed to disk (OPFS, Blob fallback) with its own download link and auto-download attempted.
 - Signaling via public PeerJS cloud (`0.peerjs.com`). File bytes go peer-to-peer.
 - Both tabs must stay open during transfer. Anyone with the code can download while sender is online.
 

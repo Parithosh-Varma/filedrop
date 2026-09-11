@@ -213,11 +213,11 @@ button {
 }
 
 button.primary {
-  background: var(--blue);
-  border: 2px solid var(--blue);
+  background: var(--ink);
+  border: 2px solid var(--ink);
   color: #fff;
 }
-button.primary:hover { background: #1a47a8; border-color: #1a47a8; }
+button.primary:hover { background: #2c3f66; border-color: #2c3f66; }
 
 button.ghost {
   background: transparent;

@@ -1,13 +1,29 @@
 /* FileDrop — P2P bulk file transfer (Cloudflare Pages static-only).
- * Signaling: public PeerJS cloud. Data: WebRTC DataConnection (SCTP, reliable).
- * No backend, no storage. One code carries a queue of files, sent in order
- * over a single connection. Both peers must keep the tab open during transfer.
+ * Signaling: public PeerJS cloud. Data: parallel WebRTC DataConnections
+ * (SCTP, reliable), raw-binary framed chunks with positional writes.
+ * No backend, no storage. One code carries a queue of files, striped in
+ * order across channels. Both peers must keep the tab open during transfer.
+ *
+ * Protocol v2 (prefix filedrop-v2-):
+ *  - control (JSON objects on first open channel): meta / fdone / done
+ *  - data (ArrayBuffer): [fi:uint16][i:uint32][payload...]
+ * Chunks of a file may arrive out of order across channels; the receiver
+ * reassembles by (fi, i) and only finishes a file after meta + fdone +
+ * all chunks are stored.
  */
 (function () {
   "use strict";
 
-  var CHUNK = 64 * 1024;
-  var PREFIX = "filedrop-v1-";
+  var DEFAULT_PAYLOAD = 250 * 1024;
+  var MAX_PAYLOAD = 256 * 1024 - 6;
+  var HEADER = 6;
+  var PREFIX = "filedrop-v2-";
+  var NUM_CHANNELS = 4;
+  var PER_CONN_CAP = 2 * 1048576;
+  var TOTAL_INFLIGHT_CAP = 8 * 1048576;
+  var LOW_WATERMARK = 1 * 1048576;
+  var PREFETCH = 4;
+  var UI_MS = 150;
 
   // ---------- tabs ----------
   var tabSend = document.getElementById("tab-send");
@@ -41,6 +57,34 @@
     return s;
   }
   function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  function sanitize(name) {
+    return String(name || "file").replace(/[\\/:*?"<>|]/g, "_").slice(0, 100) || "file";
+  }
+
+  // ---------- shared conn helpers ----------
+  function connBuffered(c) {
+    try {
+      if (c && typeof c.bufferSize === "number") return c.bufferSize;
+      if (c && c.dataChannel && typeof c.dataChannel.bufferedAmount === "number") {
+        return c.dataChannel.bufferedAmount;
+      }
+    } catch (e) {}
+    return 0;
+  }
+  function connOpen(c) {
+    try { return !!(c && c.open); } catch (e) { return false; }
+  }
+  function negotiatePayload(conns) {
+    try {
+      var pc = conns[0] && conns[0].peerConnection;
+      var sctp = pc && pc.sctp;
+      var m = sctp && sctp.maxMessageSize;
+      if (m && m > 8192) {
+        return Math.max(16 * 1024, Math.min(MAX_PAYLOAD, m - 2048 - HEADER));
+      }
+    } catch (e) {}
+    return DEFAULT_PAYLOAD;
+  }
 
   // ---------- session store + leave guard ----------
   // Survives reloads in the SAME tab (sessionStorage). Never the file bytes —
@@ -52,7 +96,10 @@
     del: function (k) { try { sessionStorage.removeItem(k); } catch (e) {} }
   };
   var transferActive = false;
-  function setActive(v) { transferActive = v; }
+  function setActive(v) {
+    transferActive = v;
+    try { if (v) startFaviconStrobe(); else stopFaviconStrobe(); } catch (e) { /* favicon is best-effort */ }
+  }
   if (typeof window !== "undefined" && window.addEventListener) {
     window.addEventListener("beforeunload", function (e) {
       if (!transferActive) return;
@@ -73,12 +120,74 @@
     liveTimers[which] = setTimeout(function () { el.setAttribute("data-live", "off"); }, 2500);
   }
 
+  // ---------- favicon strobe (tab icon flashes while a transfer is live) ----------
+  // Alternates the red/blue airmail colors so a transfer in progress is visible
+  // even when the tab is backgrounded. Restores the original icon when done.
+  var faviconLink = document.querySelector('link[rel="icon"]');
+  var faviconHrefOrig = faviconLink ? faviconLink.href : "";
+  var faviconTimer = null;
+  var faviconFrame = 0;
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+  function paintFavicon(bg) {
+    try {
+      var c = document.createElement("canvas");
+      c.width = 64; c.height = 64;
+      var g = c.getContext("2d");
+      if (!g || !faviconLink) return;
+      g.clearRect(0, 0, 64, 64);
+      g.fillStyle = bg;
+      g.beginPath();
+      if (g.roundRect) g.roundRect(2, 2, 60, 60, 14);
+      else g.rect(2, 2, 60, 60);
+      g.fill();
+      // white paper plane (simplified — reads at 16px)
+      g.fillStyle = "#ffffff";
+      g.strokeStyle = "#ffffff";
+      g.lineWidth = 7;
+      g.lineJoin = "round";
+      g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(12, 33);
+      g.lineTo(52, 13);
+      g.lineTo(37, 52);
+      g.lineTo(29, 36);
+      g.closePath();
+      g.fill();
+      g.stroke();
+      // hollow cutout
+      g.fillStyle = bg;
+      g.beginPath();
+      g.moveTo(25, 31);
+      g.lineTo(41, 23);
+      g.lineTo(32, 40);
+      g.closePath();
+      g.fill();
+      faviconLink.href = c.toDataURL("image/png");
+    } catch (e) {}
+  }
+  function startFaviconStrobe() {
+    if (faviconTimer || !faviconLink) return;
+    if (reduceMotion) { paintFavicon("#2456c8"); return; }
+    faviconFrame = 0;
+    paintFavicon("#d43d2a");
+    faviconTimer = setInterval(function () {
+      faviconFrame++;
+      paintFavicon(faviconFrame % 2 ? "#2456c8" : "#d43d2a");
+    }, 450);
+  }
+  function stopFaviconStrobe() {
+    if (faviconTimer) { clearInterval(faviconTimer); faviconTimer = null; }
+    try { if (faviconLink) faviconLink.href = faviconHrefOrig; } catch (e) {}
+  }
+
   // ---------- SENDER ----------
   var dz = document.getElementById("dropzone");
   var fi = document.getElementById("file-input");
   var sendPanel = document.getElementById("send-panel");
-  var sendPeer = null, sendConn = null, sendCancelled = false;
+  var sendPeer = null, sendConns = [], sendCancelled = false;
   var sendAlive = false, sendComplete = false, sendTotalBytes = 0, sendDoneBytes = 0;
+  var pumpStarted = false;
 
   dz.addEventListener("dragover", function (e) { e.preventDefault(); dz.classList.add("over"); });
   dz.addEventListener("dragleave", function () { dz.classList.remove("over"); });
@@ -88,11 +197,56 @@
   });
   fi.addEventListener("change", function () { if (fi.files.length) startSend(fi.files); });
 
+  function openSendConns() {
+    return sendConns.filter(connOpen);
+  }
+  function inflightBytes() {
+    var s = 0, cons = openSendConns();
+    for (var i = 0; i < cons.length; i++) s += connBuffered(cons[i]);
+    return s;
+  }
+  // Event-driven backpressure: wake as soon as any channel drains below the
+  // low watermark instead of polling on a fixed sleep.
+  function waitForCapacity() {
+    return new Promise(function (resolve) {
+      var cons = openSendConns();
+      function hasRoom() {
+        if (inflightBytes() >= TOTAL_INFLIGHT_CAP) return false;
+        for (var i = 0; i < cons.length; i++) {
+          if (connOpen(cons[i]) && connBuffered(cons[i]) < PER_CONN_CAP) return true;
+        }
+        return false;
+      }
+      if (hasRoom()) return resolve();
+      var settled = false;
+      function done() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        for (var i = 0; i < cons.length; i++) {
+          try { if (cons[i].dataChannel) cons[i].dataChannel.onbufferedamountlow = null; } catch (e) {}
+        }
+        resolve();
+      }
+      var timer = setTimeout(done, 80);
+      for (var j = 0; j < cons.length; j++) {
+        try {
+          if (cons[j].dataChannel) {
+            cons[j].dataChannel.bufferedAmountLowThreshold = LOW_WATERMARK;
+            cons[j].dataChannel.onbufferedamountlow = done;
+          }
+        } catch (e) {}
+      }
+    });
+  }
   function cleanupSend() {
     sendCancelled = true;
-    try { if (sendConn) sendConn.close(); } catch (e) {}
+    pumpStarted = false;
+    try {
+      for (var i = 0; i < sendConns.length; i++) { try { sendConns[i].close(); } catch (e) {} }
+    } catch (e) {}
     try { if (sendPeer) sendPeer.destroy(); } catch (e) {}
-    sendConn = null; sendPeer = null;
+    sendConns = []; sendPeer = null;
   }
   document.getElementById("send-cancel").onclick = function () {
     cleanupSend();
@@ -150,13 +304,32 @@
       }
     });
     sendPeer.on("connection", function (conn) {
-      sendConn = conn;
+      sendConns.push(conn);
+      try {
+        if (conn.dataChannel) conn.dataChannel.bufferedAmountLowThreshold = LOW_WATERMARK;
+      } catch (e) {}
       sendAlive = true;
       document.getElementById("send-status").textContent = "Other side connected — sending…";
       document.getElementById("send-progress").classList.remove("busy");
-      conn.on("open", function () { setActive(true); pokeLive("send"); pump(conn, files, rows); });
+      conn.on("open", function () { maybeStartPump(files, rows); });
       conn.on("close", onSendDead);
       conn.on("error", onSendDead);
+      // Some PeerJS versions deliver 'connection' already open.
+      if (connOpen(conn)) maybeStartPump(files, rows);
+    });
+  }
+
+  function maybeStartPump(files, rows) {
+    if (pumpStarted || sendCancelled) return;
+    if (!openSendConns().length) return;
+    pumpStarted = true;
+    setActive(true);
+    pokeLive("send");
+    pump(files, rows).catch(function (err) {
+      if (!sendCancelled && sendAlive) {
+        document.getElementById("send-status").textContent =
+          "Send failed: " + ((err && err.message) || err);
+      }
     });
   }
 
@@ -164,6 +337,7 @@
   // no spinning into the void. The code is deliberately kept so a reconnect
   // restarts the batch from zero on a fresh connection.
   function onSendDead() {
+    if (openSendConns().length) return; // other channels still alive
     if (sendComplete || sendCancelled || !sendAlive) return;
     sendAlive = false;
     setActive(false);
@@ -174,8 +348,12 @@
     document.getElementById("send-progress").classList.remove("busy");
   }
 
-  function safeSend(conn, msg) {
-    try { conn.send(msg); return true; }
+  // Control messages go on the first open channel. Trips the honest-halt
+  // path when nothing is left to send on.
+  function ctrlSend(msg) {
+    var cons = openSendConns();
+    if (!cons.length) { onSendDead(); return false; }
+    try { cons[0].send(msg); return true; }
     catch (e) { onSendDead(); return false; }
   }
 
@@ -185,74 +363,123 @@
     if (msg) document.getElementById("send-status").textContent = msg;
   }
 
-  function metaMsg(f, idx, count) {
+  function metaMsg(f, idx, count, payload, total) {
     return {
       t: "meta", fi: idx, fn: count,
       name: f.name, size: f.size,
       mime: f.type || "application/octet-stream",
-      total: Math.max(1, Math.ceil(f.size / CHUNK))
+      total: total, chunk: payload
     };
   }
 
-  function pump(conn, files, rows) {
+  function frameChunk(fidx, i, buf) {
+    var out = new Uint8Array(HEADER + buf.byteLength);
+    var dv = new DataView(out.buffer);
+    dv.setUint16(0, fidx);
+    dv.setUint32(2, i);
+    out.set(new Uint8Array(buf), HEADER);
+    return out.buffer;
+  }
+
+  async function pump(files, rows) {
     var t0 = Date.now();
     var totalBytes = sendTotalBytes;
+    var payload = negotiatePayload(openSendConns());
+    var totals = files.map(function (f) { return Math.max(1, Math.ceil(f.size / payload)); });
+    var sentPerFile = files.map(function () { return 0; });
+    var fdoneSent = files.map(function () { return false; });
     var doneBytes = 0;
     sendDoneBytes = 0;
-    var fi = 0, i = 0, total = metaMsg(files[0], 0, files.length).total;
-    if (!safeSend(conn, metaMsg(files[0], 0, files.length))) return;
-    setRow(rows[0], "sending");
+    var queue = [];
+    var rfi = 0, rdi = 0, eof = false;
+    var lastUi = 0;
 
     function speed() {
       var el = Math.max(0.1, (Date.now() - t0) / 1000);
       return fmt(doneBytes / el) + "/s";
     }
-    function next() {
-      if (sendCancelled || !sendAlive) return;
-      if (i >= total) {
-        if (!safeSend(conn, { t: "fdone" })) return;
-        setRow(rows[fi], "sent");
-        fi++;
-        if (fi >= files.length) {
-          if (!safeSend(conn, { t: "done" })) return;
-          sendComplete = true;
-          store.del("fd-code");
-          setActive(false);
-          var secs = Math.max(0.1, (Date.now() - t0) / 1000);
-          setSend(100, "Sent " + plural(files.length, "file", "files") +
-            " (" + fmt(totalBytes) + ") in " + secs.toFixed(1) + "s. You can close this tab.");
-          return;
-        }
-        i = 0;
-        total = metaMsg(files[fi], fi, files.length).total;
-        if (!safeSend(conn, metaMsg(files[fi], fi, files.length))) return;
-        setRow(rows[fi], "sending");
-        setTimeout(next, 0);
-        return;
-      }
-      // backpressure: don't buffer more than ~4MB
-      if (conn.bufferSize > 4 * 1048576) { setTimeout(next, 120); return; }
-      var file = files[fi];
-      var blob = file.slice(i * CHUNK, (i + 1) * CHUNK);
-      var rd = new FileReader();
-      rd.onload = function () {
-        if (sendCancelled || !sendAlive) return;
-        if (!safeSend(conn, { t: "data", i: i, buf: rd.result })) return;
-        doneBytes += rd.result.byteLength;
-        sendDoneBytes = doneBytes;
-        i++;
-        pokeLive("send");
-        var pct = totalBytes ? (doneBytes / totalBytes) * 100 : 100;
-        setSend(pct, "Sending file " + (fi + 1) + " of " + files.length +
-          " — " + fmt(doneBytes) + " / " + fmt(totalBytes) + " (" + speed() + ")");
-        setTimeout(next, 0);
-      };
-      rd.onerror = function () {
-        document.getElementById("send-status").textContent = "Could not read “" + file.name + "”.";
-      };
-      rd.readAsArrayBuffer(blob);
+    function ui(pct, msg, force) {
+      var now = Date.now();
+      if (!force && now - lastUi < UI_MS && pct < 100) return;
+      lastUi = now;
+      pokeLive("send");
+      setSend(pct, msg);
     }
-    next();
+    async function readNext() {
+      while (rfi < files.length) {
+        if (rdi >= totals[rfi]) { rfi++; rdi = 0; continue; }
+        var file = files[rfi], idx = rdi, fidx = rfi;
+        rdi++;
+        try {
+          var buf = await file.slice(idx * payload, (idx + 1) * payload).arrayBuffer();
+        } catch (e) {
+          setActive(false);
+          document.getElementById("send-status").textContent = "Could not read “" + file.name + "”.";
+          throw e;
+        }
+        if (sendCancelled) return null;
+        return { fi: fidx, i: idx, buf: buf };
+      }
+      return null;
+    }
+
+    // First file header goes out before any of its bytes.
+    if (!ctrlSend(metaMsg(files[0], 0, files.length, payload, totals[0]))) return;
+    setRow(rows[0], "sending");
+
+    while (true) {
+      while (queue.length < PREFETCH && !eof) {
+        var nxt = await readNext();
+        if (sendCancelled || !sendAlive) return;
+        if (!nxt) { eof = true; break; }
+        queue.push(nxt);
+      }
+      if (!queue.length) break; // fully read and drained
+      var cons = openSendConns();
+      if (!cons.length) { onSendDead(); return; }
+      while (!sendCancelled && sendAlive &&
+             (inflightBytes() >= TOTAL_INFLIGHT_CAP ||
+              !cons.some(function (c) { return connOpen(c) && connBuffered(c) < PER_CONN_CAP; }))) {
+        await waitForCapacity();
+        cons = openSendConns();
+        if (!cons.length) { onSendDead(); return; }
+      }
+      if (sendCancelled || !sendAlive) return;
+      cons.sort(function (a, b) { return connBuffered(a) - connBuffered(b); });
+      var item = queue.shift();
+      try {
+        cons[0].send(frameChunk(item.fi, item.i, item.buf));
+      } catch (e) {
+        queue.unshift(item);
+        await waitForCapacity();
+        continue;
+      }
+      doneBytes += item.buf.byteLength;
+      sendDoneBytes = doneBytes; // Math.round-compatible with onSendDead's frozen pct
+      sentPerFile[item.fi]++;
+      if (sentPerFile[item.fi] === totals[item.fi] && !fdoneSent[item.fi]) {
+        fdoneSent[item.fi] = true;
+        if (!ctrlSend({ t: "fdone", fi: item.fi })) return;
+        setRow(rows[item.fi], "sent");
+        var nx = item.fi + 1;
+        if (nx < files.length) {
+          if (!ctrlSend(metaMsg(files[nx], nx, files.length, payload, totals[nx]))) return;
+          setRow(rows[nx], "sending");
+        }
+      }
+      var pct = totalBytes ? (doneBytes / totalBytes) * 100 : 100;
+      ui(pct, "Sending file " + (item.fi + 1) + " of " + files.length +
+        " — " + fmt(doneBytes) + " / " + fmt(totalBytes) + " (" + speed() + ")", false);
+    }
+
+    if (sendCancelled || !sendAlive) return;
+    if (!ctrlSend({ t: "done" })) return;
+    sendComplete = true;
+    store.del("fd-code");
+    setActive(false);
+    var secs = Math.max(0.1, (Date.now() - t0) / 1000);
+    setSend(100, "Sent " + plural(files.length, "file", "files") +
+      " (" + fmt(totalBytes) + ") in " + secs.toFixed(1) + "s (" + fmt(totalBytes / secs) + "/s). You can close this tab.");
   }
 
   function setRow(li, state) {
@@ -339,6 +566,7 @@
     });
     recvPeer.on("error", function (err) {
       var t = (err && err.type) || "";
+      setActive(false);
       if (t === "peer-unavailable") setRecv("Sender not found. Check the code — the sender tab must stay open.");
       else setRecv("Peer error: " + t);
     });

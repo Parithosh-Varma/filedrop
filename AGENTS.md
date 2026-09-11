@@ -5,7 +5,7 @@ Browser-to-browser P2P file transfer. Static-only: no backend, no R2/KV/Function
 ## Structure
 
 - `public/index.html` — Send (dropzone + ticket) / Receive views, tab switch, inline scripts for `?code=` deep-link and progress mirroring
-- `public/app.js` — all transfer logic (IIFE, vanilla JS): PeerJS signaling, single WebRTC DataChannel, 64KB chunks with ~4MB backpressure guard, bulk queue sent in order
+- `public/app.js` — all transfer logic (IIFE, vanilla JS): PeerJS signaling, 4 parallel reliable DataChannels, ~250KB raw-binary framed chunks (`[fi:uint16][i:uint32][payload]`, SCTP-size negotiated), 4-deep read prefetch via `Blob.arrayBuffer()`, event-driven backpressure (2MB/conn, 8MB total), throttled progress UI (150ms), OPFS streaming receive with Blob fallback. Protocol v2 (`filedrop-v2-` prefix) — not interoperable with v1 IDs.
 - `public/styles.css` — airmail counter aesthetic (par-avion `.stripe` + perforated `.ticket`); Space Grotesk + Space Mono via Google Fonts
 - `wrangler.jsonc` — Worker name `filedrop`, assets `./public`
 - `.wrangler/` is gitignored build/deploy output — never commit
