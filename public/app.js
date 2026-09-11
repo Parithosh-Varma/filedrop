@@ -309,6 +309,8 @@
         if (conn.dataChannel) conn.dataChannel.bufferedAmountLowThreshold = LOW_WATERMARK;
       } catch (e) {}
       sendAlive = true;
+      // A fresh connection after a clean finish means "send it all again".
+      if (sendComplete) { sendComplete = false; pumpStarted = false; }
       document.getElementById("send-status").textContent = "Other side connected — sending…";
       document.getElementById("send-progress").classList.remove("busy");
       conn.on("open", function () { maybeStartPump(files, rows); });
@@ -341,6 +343,7 @@
     if (openSendConns().length) return; // other channels still alive
     if (sendComplete || sendCancelled || !sendAlive) return;
     sendAlive = false;
+    pumpStarted = false; // a later fresh connection restarts the pump from zero
     setActive(false);
     // Math.round matches setSend's toFixed(0), so the number never jumps back.
     var pct = sendTotalBytes ? Math.round((sendDoneBytes / sendTotalBytes) * 100) : 0;
