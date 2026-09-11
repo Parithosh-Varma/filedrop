@@ -438,7 +438,8 @@
       var kind = riskyKind(f.name);
       if (kind) {
         var w = document.createElement("span"); w.className = "filewarn";
-        w.textContent = "⚠ " + kind + " — receiver will be warned";
+        if (window.FDIcon) w.appendChild(window.FDIcon.el("warn"));
+        w.appendChild(document.createTextNode(kind + " — receiver will be warned"));
         li.appendChild(w);
       }
       return li;
@@ -888,7 +889,8 @@
     if (kind && !f.li.querySelector(".filewarn")) {
       var w = document.createElement("span");
       w.className = "filewarn";
-      w.textContent = "⚠ " + kind + " — only open if you trust the sender";
+      if (window.FDIcon) w.appendChild(window.FDIcon.el("warn"));
+      w.appendChild(document.createTextNode(kind + " — only open if you trust the sender"));
       w.title = "This file type can contain code. Download it only if you expected it.";
       f.li.appendChild(w);
     }
@@ -1362,7 +1364,8 @@
       if (kind) {
         var w = document.createElement("span");
         w.className = "filewarn";
-        w.textContent = "⚠ " + kind;
+        if (window.FDIcon) w.appendChild(window.FDIcon.el("warn"));
+        w.appendChild(document.createTextNode(kind));
         w.title = "Only open if you trust the sender.";
         li.appendChild(w);
       }

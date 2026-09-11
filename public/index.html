@@ -116,6 +116,7 @@
 
   <footer>
     <p>Peer-to-peer over WebRTC, introduced by the public PeerJS network. No uploads, no accounts. Verify the sender before connecting — files are never auto-downloaded, always use the per-file Download link.</p>
+    <button id="sound-toggle" class="quiet" type="button" aria-pressed="true"><svg class="snd-icon snd-on" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 6.3a8.2 8.2 0 0 1 0 11.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><svg class="snd-icon snd-off" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" hidden><path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor"/><path d="M15.5 9.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span id="sound-label">Sound on</span></button>
   </footer>
 </div>
 
@@ -123,8 +124,10 @@
 <script src="vendor/qrcode.min.js"></script>
 <script src="vendor/gsap.min.js"></script>
 <script src="vendor/anime.min.js"></script>
+<script src="icons.js"></script>
 <script src="app.js"></script>
 <script src="ui.js"></script>
 <script src="animations.js"></script>
+<script src="sounds.js"></script>
 </body>
 </html>

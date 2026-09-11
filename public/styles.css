@@ -291,7 +291,9 @@ button.quiet:hover { border-color: var(--red); color: var(--red); }
 
 /* Security warning for risky file types (executables, scripts, HTML/SVG). */
 .filewarn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   margin-left: 0.5rem;
   padding: 0.1rem 0.45rem;
   border: 1.5px solid var(--red);
@@ -377,6 +379,9 @@ footer p { color: var(--ink-soft); font-size: 0.85rem; margin: 0; max-width: 60c
 .ticket { transform-style: preserve-3d; will-change: transform; }
 .ticket.sent-glow { box-shadow: 6px 6px 0 var(--ink), 0 0 0 5px #1e7d3244, 0 18px 60px #1e7d3233; }
 .fx-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   position: absolute; right: 14px; top: 12px;
   font-family: var(--mono); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em;
   color: #1e7d32; border: 2px solid #1e7d32; border-radius: 8px;
@@ -434,6 +439,20 @@ footer { will-change: transform, opacity; }
   .orb-b { width: 190px; height: 190px; }
   .fx-plane.p2, .fx-plane.p3 { display: none; }
 }
+
+/* ---------- custom svg icons (no emoji anywhere in the UI) ---------- */
+.fd-icon { width: 1em; height: 1em; flex: none; }
+.filewarn .fd-icon { width: 0.95em; height: 0.95em; }
+.fx-stamp .fd-icon { width: 0.95em; height: 0.95em; }
+#sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  margin-top: 0.7rem;
+}
+#sound-toggle .snd-icon { width: 16px; height: 16px; flex: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .counter:not([hidden]), #send-panel:not([hidden]) .ticket { animation: none; }

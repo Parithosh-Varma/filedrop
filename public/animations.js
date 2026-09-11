@@ -487,7 +487,8 @@
         if (!$all(".fx-stamp", ticket).length) {
           var stamp = document.createElement("span");
           stamp.className = "fx-stamp";
-          stamp.textContent = "SENT ✓";
+          if (window.FDIcon) stamp.appendChild(window.FDIcon.el("check"));
+          stamp.appendChild(document.createTextNode("SENT"));
           ticket.appendChild(stamp);
           if (hasGsap) {
             try { hasGsap.from(stamp, { scale: 2.2, opacity: 0, rotation: -18, duration: 0.5, ease: "expo.out" }); } catch (e) {}
