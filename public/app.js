@@ -51,7 +51,7 @@
   // ---------- security limits ----------
   var CODE_LEN = 12;
   var CODE_TTL_MS = 30 * 60 * 1000; // sender code expires after 30 min
-  var MAX_FILES = 50;
+  var MAX_FILES = 100;
   var MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2 GiB per file
   var MAX_TOTAL_BYTES = 4 * 1024 * 1024 * 1024; // 4 GiB per batch
   var MAX_CHUNKS_PER_FILE = 16384; // 2 GiB / 128 KiB headroom
