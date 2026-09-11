@@ -4,12 +4,15 @@
  * No backend, no storage. One code carries a queue of files, striped in
  * order across channels. Both peers must keep the tab open during transfer.
  *
- * Protocol v3 (prefix filedrop-v3-, 12-char codes). Receiver still accepts
- * v2 (filedrop-v2-, 6-char) for backwards compatibility with old links.
+ * Protocol v3 (prefix filedrop-v3-, 12-char codes). v2 6-char codes are
+ * no longer accepted (30-bit space was enumerable).
  *  - control (JSON objects on first open channel): meta / fdone / done
  *  - ack (receiver -> sender, any channel): {t:"received"} once every byte
  *    is saved; the sender shows 100% only after it (99% + waiting until
  *    then), so "done" always means the other side actually has the files.
+ *  - cancel (either direction, best-effort): {t:"cancelled"} ahead of
+ *    teardown (250ms flush delay) so the far side can toast "stopped"
+ *    instead of guessing a network drop; close-detection stays the fallback.
  *  - data (ArrayBuffer): [fi:uint16][i:uint32][payload...]
  * Chunks of a file may arrive out of order across channels; the receiver
  * reassembles by (fi, i) and only finishes a file after meta + fdone +
@@ -38,7 +41,6 @@
   var MAX_BIN_SLOP = 4096; // tolerate SCTP negotiation differences
   var HEADER = 6;
   var PREFIX_V3 = "filedrop-v3-";
-  var PREFIX_V2 = "filedrop-v2-";
   var NUM_CHANNELS = 4;
   var PER_CONN_CAP = 2 * 1048576;
   var TOTAL_INFLIGHT_CAP = 8 * 1048576;
@@ -85,8 +87,8 @@
     viewSend.hidden = !send;
     viewReceive.hidden = send;
     if (!send) {
-      var m = /[?&]code=([A-Za-z0-9]{4,16})/.exec(location.search);
-      if (m) document.getElementById("receive-code").value = m[1].toUpperCase();
+      var m = /[?&]code=([A-Za-z0-9]{6,16})/.exec(location.search);
+      if (m) document.getElementById("receive-code").value = m[1].toUpperCase().slice(0, 12);
     }
   }
   tabSend.onclick = function () { show("send"); };
@@ -114,10 +116,55 @@
     return s;
   }
   function prefixForCode(code) {
-    // Old 6-8 char codes -> v2 prefix; new 12+ char codes -> v3 prefix.
-    return (code && code.length <= 8) ? PREFIX_V2 : PREFIX_V3;
+    // v3 only: 6-char v2 codes are no longer accepted (enumerable 30-bit
+    // space). Kept as a function so call sites stay readable.
+    return PREFIX_V3;
   }
   function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  // Short authentication string: 6 digits from SHA-256(code|sender|receiver).
+  // Both tabs derive the same value; users compare it over a second channel
+  // (voice/video) to detect a signaling MITM. Async (WebCrypto) with a
+  // deterministic FNV-1a fallback for very old browsers.
+  var sasToken = 0;
+  function fallbackSas6(input) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < input.length; i++) {
+      h ^= input.charCodeAt(i);
+      h = (h * 0x01000193) >>> 0;
+    }
+    var n = h % 1000000;
+    return ("00" + Math.floor(n / 1000)).slice(-3) + "-" + ("00" + (n % 1000)).slice(-3);
+  }
+  function showSas(which, code, senderId, receiverId) {
+    var my = ++sasToken;
+    var el = document.getElementById(which === "send" ? "send-sas" : "receive-sas");
+    if (!el) return;
+    var input = code + "|" + senderId + "|" + receiverId;
+    function paint(s) {
+      if (my !== sasToken) return; // superseded (new transfer / cleanup)
+      var c = el.querySelector(".sas-code");
+      if (c) c.textContent = s;
+      el.hidden = false;
+    }
+    try {
+      if (window.crypto && crypto.subtle && crypto.subtle.digest && typeof TextEncoder !== "undefined") {
+        crypto.subtle.digest("SHA-256", new TextEncoder().encode(input)).then(function (buf) {
+          var b = new Uint8Array(buf);
+          var n = ((b[0] << 12) | (b[1] << 4) | (b[2] >> 4)) % 1000000;
+          paint(("00" + Math.floor(n / 1000)).slice(-3) + "-" + ("00" + (n % 1000)).slice(-3));
+        }).catch(function () { paint(fallbackSas6(input)); });
+        return;
+      }
+    } catch (e) {}
+    paint(fallbackSas6(input));
+  }
+  function hideSas() {
+    sasToken++;
+    try {
+      document.getElementById("send-sas").hidden = true;
+      document.getElementById("receive-sas").hidden = true;
+    } catch (e) {}
+  }
   function sanitize(name) {
     return String(name || "file").replace(/[\\/:*?"<>|]/g, "_").slice(0, 100) || "file";
   }
@@ -145,11 +192,13 @@
   }
 
   // ---------- sender auto-zip ----------
-  // Batches of more than ZIP_MIN_FILES totaling more than ZIP_MIN_BYTES go
-  // out as ONE STORE (uncompressed) .zip, so the receiver clicks a single
-  // download instead of one per file. STORE = no compression pass; packing
-  // runs at local disk speed after one CRC read pass. The receiver needs no
-  // changes — it just gets a file whose name ends in .zip.
+  // Big or many-file batches go out as ONE STORE (uncompressed) .zip, so the
+  // receiver clicks a single download instead of one per file (v3 has no
+  // auto-download — every file costs an explicit click). STORE = no
+  // compression pass; packing runs at disk speed after one CRC read pass.
+  // The receiver needs no changes — it just gets a file ending in .zip.
+  // Rule: 6+ files (any size) OR 2+ files totaling 1+ GiB. Single files
+  // never zip (same click count plus an unzip step = pure loss).
   // Bounds: the zip is itself one file, so it must fit MAX_FILE_SIZE, the
   // zip32 32-bit fields, and the batch cap with room for container overhead.
   var ZIP_MIN_FILES = 6;
@@ -183,7 +232,9 @@
     return { names: names, size: size };
   }
   function zipShouldPack(files, total) {
-    if (files.length < ZIP_MIN_FILES || total < ZIP_MIN_BYTES) return null;
+    var many = files.length >= ZIP_MIN_FILES;
+    var heavy = files.length >= 2 && total >= ZIP_MIN_BYTES;
+    if (!many && !heavy) return null;
     var plan = zipPlan(files);
     if (plan.size > MAX_FILE_SIZE || plan.size > ZIP32_MAX) return null;
     if (plan.size + ZIP_HEADROOM > MAX_TOTAL_BYTES) return null;
@@ -440,6 +491,42 @@
     }
   }
 
+  // ---------- toast notifications ----------
+  // Stacked, auto-dismissing, theme-matched. Used when the FAR side stops
+  // the transfer (explicit {t:"cancelled"}), so the event is unmissable even
+  // if the inline status scrolled out of view. Vanilla + CSS only: works
+  // even if the animation libs fail to load.
+  function toast(msg, kind) {
+    try {
+      var box = document.getElementById("toasts");
+      if (!box) return;
+      while (box.children.length >= 3) box.removeChild(box.firstChild);
+      var t = document.createElement("div");
+      t.className = "toast " + (kind || "info");
+      t.setAttribute("role", "status");
+      if (window.FDIcon) t.appendChild(window.FDIcon.el(kind === "warn" ? "warn" : "info"));
+      var s = document.createElement("span");
+      s.textContent = msg;
+      t.appendChild(s);
+      var gone = false;
+      function dismiss() {
+        if (gone) return;
+        gone = true;
+        try { t.classList.add("leaving"); } catch (e0) {}
+        setTimeout(function () { try { if (t.parentNode) t.parentNode.removeChild(t); } catch (e1) {} }, 260);
+      }
+      var x = document.createElement("button");
+      x.type = "button";
+      x.className = "toast-x";
+      x.setAttribute("aria-label", "Dismiss notification");
+      x.textContent = "×";
+      x.onclick = function () { dismiss(); };
+      t.appendChild(x);
+      box.appendChild(t);
+      setTimeout(dismiss, 6500);
+    } catch (e) {}
+  }
+
   // ---------- SENDER ----------
   var dz = document.getElementById("dropzone");
   var fi = document.getElementById("file-input");
@@ -451,6 +538,7 @@
   // receiver confirmed every byte saved (its {t:"received"}). 100% requires
   // BOTH; until the ack the UI parks at 99% + "waiting".
   var sendAcked = false, sendAckTimer = null, sendT0 = 0;
+  var sendStopTimer = null;
   var sendOwnerPeer = null;
   var sendExpiryTimer = null;
 
@@ -521,11 +609,19 @@
     sendConns = []; sendPeer = null;
   }
   document.getElementById("send-cancel").onclick = function () {
-    cleanupSend();
-    store.del("fd-code");
-    store.del("fd-code-ts");
-    setActive(false);
-    document.getElementById("send-status").textContent = "Stopped. Code discarded.";
+    // Best-effort heads-up so the receiver toasts "stopped" instead of
+    // guessing a network drop. Brief delay lets the reliable channel flush
+    // it before teardown (guarded: a re-drop in between cancels the timer).
+    try { ctrlSend({ t: "cancelled" }); } catch (e) {}
+    if (sendStopTimer) { try { clearTimeout(sendStopTimer); } catch (e2) {} }
+    sendStopTimer = setTimeout(function () {
+      sendStopTimer = null;
+      cleanupSend();
+      store.del("fd-code");
+      store.del("fd-code-ts");
+      setActive(false);
+      document.getElementById("send-status").textContent = "Stopped. Code discarded.";
+    }, 250);
   };
 
   function validStoredCode(c, ts) {
@@ -616,6 +712,7 @@
       return li;
     });
 
+    shareSendUi(code);
     startPeer(files, rows, code, peerId);
   }
 
@@ -710,7 +807,9 @@
       } catch (e) {}
       sendAlive = true;
       // A fresh connection after a clean finish means "send it all again".
-      if (sendComplete) { sendComplete = false; pumpStarted = false; sendAcked = false; clearSendAckTimer(); }
+      if (sendComplete) { sendComplete = false; pumpStarted = false;     sendAcked = false;
+    clearSendAckTimer();
+    if (sendStopTimer) { try { clearTimeout(sendStopTimer); } catch (e0) {} sendStopTimer = null; } }
       document.getElementById("send-status").textContent = "Other side connected — sending…";
       document.getElementById("send-progress").classList.remove("busy");
       conn.on("open", function () { maybeStartPump(sendFiles, rows); });
@@ -808,7 +907,24 @@
     }, 45000);
   }
   function onSendData(d) {
-    if (d && typeof d === "object" && d.t === "received") onRecvAck();
+    if (!d || typeof d !== "object") return;
+    if (d.t === "received") onRecvAck();
+    else if (d.t === "cancelled") onRecvCancelled();
+  }
+
+  // The receiver pressed Stop: freeze honestly like a disconnect, but name
+  // it and toast it. Pump checkpoints on sendAlive and exits quietly; the
+  // closing conns then hit onSendDead, which returns early via !sendAlive.
+  function onRecvCancelled() {
+    if (sendAcked || sendCancelled || !sendAlive) return;
+    sendAlive = false;
+    pumpStarted = false;
+    setActive(false);
+    clearSendAckTimer();
+    document.getElementById("send-progress").classList.remove("busy");
+    var pct = sendTotalBytes ? Math.round((sendDoneBytes / sendTotalBytes) * 100) : 0;
+    setSend(pct, "The other side stopped the transfer at " + pct + "%.");
+    toast("Receiver stopped the transfer", "warn");
   }
 
   function metaMsg(f, idx, count, payload, total) {
@@ -963,6 +1079,7 @@
   var allDoneMsg = false, firstMetaSeen = false, lastRecvUi = 0;
   var recvAttempts = [];
   var recvAborted = false;
+  var recvCancelNoted = false, recvStopTimer = null;
 
   document.getElementById("receive-form").addEventListener("submit", function (e) {
     e.preventDefault();
@@ -983,10 +1100,22 @@
     }
   };
   document.getElementById("receive-cancel").onclick = function () {
-    try { for (var i = 0; i < recvConns.length; i++) recvConns[i].close(); } catch (e) {}
-    try { if (recvPeer) recvPeer.destroy(); } catch (e) {}
-    setActive(false);
-    setRecv("Stopped.");
+    // Best-effort heads-up so the sender toasts "stopped" instead of
+    // guessing a network drop. Brief delay lets the reliable channels flush
+    // it before teardown (guarded: a reconnect in between clears the timer).
+    try {
+      for (var i = 0; i < recvConns.length; i++) {
+        try { if (recvConns[i] && recvConns[i].open) recvConns[i].send({ t: "cancelled" }); } catch (e2) {}
+      }
+    } catch (e) {}
+    if (recvStopTimer) { try { clearTimeout(recvStopTimer); } catch (e3) {} }
+    recvStopTimer = setTimeout(function () {
+      recvStopTimer = null;
+      try { for (var j = 0; j < recvConns.length; j++) recvConns[j].close(); } catch (e4) {}
+      try { if (recvPeer) recvPeer.destroy(); } catch (e5) {}
+      setActive(false);
+      setRecv("Stopped.");
+    }, 250);
   };
 
   function checkRecvRateLimit() {
@@ -1050,6 +1179,8 @@
     rfiles = {}; rTotalBytes = 0; rDoneBytes = 0; rCount = 0; t0r = Date.now();
     lastCode = code;
     recvAborted = false;
+    recvCancelNoted = false;
+    if (recvStopTimer) { try { clearTimeout(recvStopTimer); } catch (e0) {} recvStopTimer = null; }
     recvSession = Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
     recvOpfsRoot = null; recvOpfsTried = false;
     allDoneMsg = false; firstMetaSeen = false; lastRecvUi = 0;
@@ -1100,6 +1231,30 @@
   }
 
   // Honest-halt, multi-channel edition: only when every channel is down.
+  // The sender pressed Stop: name it (vs. a network drop), toast it, and
+  // remember it so the inevitable conn closes don't clobber the message
+  // via onRecvDead (guarded there by recvCancelNoted).
+  function onSenderCancelled() {
+    if (recvAborted) return;
+    recvCancelNoted = true;
+    document.getElementById("receive-progress").classList.remove("busy");
+    var keys = Object.keys(rfiles);
+    var pending = keys.some(function (k) { return !rfiles[k].complete; });
+    if (!keys.length || pending) {
+      setActive(false);
+      keys.forEach(function (k) {
+        var f = rfiles[k];
+        if (!f.complete) {
+          f.li.querySelector(".fstate").textContent = "stopped";
+          f.li.setAttribute("data-state", "stopped");
+        }
+      });
+      setRecv("Sender stopped sending. Finished files are kept below — tap Reconnect if they resume, or ask for a fresh code.");
+      document.getElementById("receive-reconnect").hidden = false;
+    }
+    toast("Sender stopped sending", "warn");
+  }
+
   function onRecvDead() {
     if (recvAborted) return;
     if (recvConns.some(connOpen)) return;
@@ -1115,7 +1270,9 @@
           f.li.setAttribute("data-state", "stopped");
         }
       });
-      setRecv("Sender left before everything arrived. Finished files are kept below — tap Reconnect to restart the batch.");
+      if (!recvCancelNoted) {
+        setRecv("Sender left before everything arrived. Finished files are kept below — tap Reconnect to restart the batch.");
+      }
       document.getElementById("receive-reconnect").hidden = false;
     }
   }
@@ -1406,6 +1563,8 @@
       if (!f2) return;
       f2.fdone = true;
       checkEntry(f2);
+    } else if (d.t === "cancelled") {
+      onSenderCancelled();
     } else if (d.t === "done") {
       allDoneMsg = true;
       maybeFinishAll();

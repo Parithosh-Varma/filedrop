@@ -1,6 +1,30 @@
 /* Filedrop — airmail counter aesthetic.
    One memorable thing: par-avion stripes + perforated claim ticket.
-   Everything else is quiet paper and ink. */
+   Everything else is quiet paper and ink.
+   Fonts are self-hosted (vendor/fonts, latin subset) — no Google Fonts
+   requests, so claim codes and IPs are never sent to a font CDN. */
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("vendor/fonts/grotesk-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("vendor/fonts/mono-400-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("vendor/fonts/mono-700-latin.woff2") format("woff2");
+}
 
 :root {
   color-scheme: light;
@@ -311,6 +335,17 @@ button.quiet:hover { border-color: var(--red); color: var(--red); }
 }
 .filelist li[data-state="error"] .fstate { color: var(--red); font-weight: 700; }
 
+/* Short-authentication-string (MITM check) + ephemeral vault opt-out. */
+.sas {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border: 1.5px dashed var(--blue);
+  border-radius: 10px;
+  font-size: 0.92rem;
+}
+.sas-code { font-family: var(--mono); letter-spacing: 0.1em; }
+.ephem { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.8rem; font-size: 0.92rem; }
+
 /* ---------- qr ---------- */
 .qrwrap { display: flex; align-items: center; gap: 1rem; margin: 1.2rem 0 0; }
 .qrwrap img { border: 2px solid var(--ink); border-radius: 10px; display: block; flex: none; }
@@ -460,9 +495,56 @@ footer { will-change: transform, opacity; }
 }
 #sound-toggle .snd-icon { width: 16px; height: 16px; flex: none; }
 
+/* ---------- toast notifications ---------- */
+.toasts {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1rem;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(92vw, 420px);
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 0.65rem 0.8rem;
+  box-shadow: 4px 4px 0 var(--ink);
+  font-weight: 500;
+  animation: toast-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.toast.warn { border-color: var(--red); box-shadow: 4px 4px 0 var(--red); }
+.toast .fd-icon { width: 18px; height: 18px; }
+.toast.warn .fd-icon { color: var(--red); }
+.toast.info .fd-icon { color: var(--blue); }
+.toast span { overflow-wrap: anywhere; }
+.toast-x {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  flex: none;
+}
+.toast-x:hover { color: var(--ink); }
+.toast.leaving { animation: toast-out 0.25s ease both; }
+@keyframes toast-in { from { transform: translateY(14px); opacity: 0; } }
+@keyframes toast-out { to { transform: translateY(8px); opacity: 0; } }
+
 @media (prefers-reduced-motion: reduce) {
   .counter:not([hidden]), #send-panel:not([hidden]) .ticket { animation: none; }
   .live[data-live="on"] .livedot, progress.busy::-webkit-progress-value { animation: none; }
+  .toast, .toast.leaving { animation: none; }
   .stripe, .orb-a, .orb-b, .orb-c,
   .filelist li.fx-enter, #vault-list li.fx-enter,
   .counter.over .counter-icon, #receive-reconnect.fx-attn,

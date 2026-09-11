@@ -133,7 +133,7 @@
     new MutationObserver(function () {
       var msg = sendStatus.textContent || "";
       if (/other side connected/i.test(msg)) connectPop();
-      else if (/other side disconnected/i.test(msg)) disconnectTone();
+      else if (/other side disconnected|stopped the transfer/i.test(msg)) disconnectTone();
     }).observe(sendStatus, { childList: true, characterData: true, subtree: true });
   }
   if (sendPct) {
@@ -166,8 +166,8 @@
     new MutationObserver(function () {
       var msg = (recvStatus.textContent || "").trim();
       if (/^done —/i.test(msg)) successFanfare();
-      else if (/sender not found|peer error/i.test(msg)) errorBuzz();
-      else if (/sender left before everything arrived/i.test(msg)) disconnectTone();
+      else if (/could not connect|check the code|peer error/i.test(msg)) errorBuzz();
+      else if (/sender left before everything arrived|sender stopped sending/i.test(msg)) disconnectTone();
       else if (/connected — waiting/i.test(msg)) connectPop();
     }).observe(recvStatus, { childList: true, characterData: true, subtree: true });
   }

@@ -8,11 +8,7 @@
 <meta name="referrer" content="no-referrer" />
 <link rel="icon" href="favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5555619941305353" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="stripe" aria-hidden="true"></div>
@@ -71,6 +67,7 @@
               <span id="send-live" class="live" data-live="off"><span class="livedot" aria-hidden="true"></span>Live</span>
             </div>
             <p id="send-status" class="status" role="status">Waiting for the other side…</p>
+            <p id="send-sas" class="sas" hidden>Verify with the other side: <strong class="sas-code"></strong> — if it doesn’t match, tap Stop.</p>
             <div class="actionrow">
               <button id="send-cancel" class="quiet" type="button">Stop sending</button>
               <button id="send-again" class="quiet" type="button" hidden>Send another file</button>
@@ -79,7 +76,7 @@
         </article>
         <figure class="qrwrap">
           <img id="share-qr" alt="QR code for the share link" hidden width="148" height="148" />
-          <figcaption>Scan to open the receive side on a phone. Generated locally in your browser — the code never leaves this tab.</figcaption>
+          <figcaption>Scan to open the receive side on a phone — the transfer starts automatically. Generated locally in your browser — the code never leaves this tab.</figcaption>
         </figure>
       </div>
     </section>
@@ -88,12 +85,13 @@
     <section id="view-receive" aria-label="Receive a file" hidden>
       <form id="receive-form" class="claim">
         <label class="field">Claim code
-          <input id="receive-code" type="text" placeholder="K7Q2XA9M4ZD2P" autocomplete="off" spellcheck="false" maxlength="16" />
+          <input id="receive-code" type="text" placeholder="K7Q2XA9M4ZD2P" autocomplete="off" spellcheck="false" maxlength="12" inputmode="latin-prose" />
         </label>
         <button type="submit" class="primary">Connect</button>
-        <p class="hint">Ask the sender for the 12-character code (older 6-character codes still work). Their tab must stay open. Only connect if you trust the sender — files must be downloaded manually, never open executables you did not expect.</p>
+        <p class="hint">Ask the sender for the 12-character code. Their tab must stay open. Only connect if you trust the sender — files must be downloaded manually, never open executables you did not expect.</p>
       </form>
       <p id="receive-status" class="status" role="status"></p>
+      <p id="receive-sas" class="sas" hidden>Verify with the sender: <strong class="sas-code"></strong> — if it doesn’t match, tap Stop.</p>
       <div class="progressline" id="receive-progressline" hidden>
         <progress id="receive-progress" max="100" value="0" hidden></progress>
         <span id="receive-pct" class="bytes"></span>
@@ -108,6 +106,7 @@
       <section id="vault" aria-label="Saved on this device" hidden>
         <h2>Saved on this device</h2>
         <p class="hint">Finished files stay here for up to 7 days even if you refresh. Anyone with access to this browser profile can read them — clear after use on shared devices. Clearing also deletes temporary transfer data.</p>
+        <label class="ephem"><input type="checkbox" id="vault-off" /> Don’t keep files on this device (download only)</label>
         <ul id="vault-list" class="filelist"></ul>
         <button id="vault-clear" class="quiet" type="button">Clear saved files</button>
       </section>
@@ -119,6 +118,8 @@
     <button id="sound-toggle" class="quiet" type="button" aria-pressed="true"><svg class="snd-icon snd-on" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 6.3a8.2 8.2 0 0 1 0 11.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><svg class="snd-icon snd-off" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" hidden><path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor"/><path d="M15.5 9.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span id="sound-label">Sound on</span></button>
   </footer>
 </div>
+
+<div id="toasts" class="toasts" aria-live="polite" aria-label="Notifications"></div>
 
 <script src="vendor/peerjs.min.js"></script>
 <script src="vendor/qrcode.min.js"></script>
