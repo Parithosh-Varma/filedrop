@@ -29,14 +29,9 @@ body {
 
 /* Full-bleed par-avion bar: the single graphic motif. */
 .stripe {
-  height: 12px;
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--red) 0 14px,
-    #fff 14px 28px,
-    var(--blue) 28px 42px,
-    #fff 42px 56px
-  );
+  height: 14px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='14' viewBox='0 0 56 14'%3E%3Crect width='56' height='14' fill='%23ffffff'/%3E%3Cpolygon points='0,14 14,0 28,0 14,14' fill='%23d43d2a'/%3E%3Cpolygon points='28,14 42,0 56,0 42,14' fill='%232456c8'/%3E%3C/svg%3E") repeat-x left top;
+  background-size: 56px 14px;
 }
 
 .page { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
@@ -56,7 +51,7 @@ body {
 .switch {
   display: inline-grid;
   grid-template-columns: 1fr 1fr;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--red);
   border-radius: 12px;
   overflow: hidden;
   min-width: min(100%, 340px);
@@ -73,8 +68,8 @@ body {
   cursor: pointer;
 }
 
-.switch button + button { border-left: 2px solid var(--ink); }
-.switch button.active { background: var(--ink); color: var(--paper); }
+.switch button + button { border-left: 2px solid var(--red); }
+.switch button.active { background: var(--red); border-color: var(--red); color: var(--paper); }
 
 /* ---------- send counter ---------- */
 .counter {
@@ -188,11 +183,11 @@ button {
 }
 
 button.primary {
-  background: var(--blue);
-  border: 2px solid var(--blue);
+  background: var(--red);
+  border: 2px solid var(--red);
   color: #fff;
 }
-button.primary:hover { background: #1a47a8; border-color: #1a47a8; }
+button.primary:hover { background: #b23222; border-color: #b23222; }
 
 button.ghost {
   background: transparent;
