@@ -5,15 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Filedrop</title>
 <meta name="description" content="Browser-to-browser file transfer. Nothing is uploaded — files travel directly between two tabs." />
+<meta name="referrer" content="no-referrer" />
 <link rel="icon" href="favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5555619941305353" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="stripe" aria-hidden="true"></div>
+<div class="fx-ambient" aria-hidden="true">
+  <span class="orb orb-a"></span>
+  <span class="orb orb-b"></span>
+  <span class="orb orb-c"></span>
+  <svg class="fx-plane p1" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 22 2l-7 20-4-8z"/><path d="M11 12 22 2"/></svg>
+  <svg class="fx-plane p2" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 22 2l-7 20-4-8z"/><path d="M11 12 22 2"/></svg>
+  <svg class="fx-plane p3" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 22 2l-7 20-4-8z"/><path d="M11 12 22 2"/></svg>
+</div>
+<div id="fx-confetti" aria-hidden="true"></div>
 
 <div class="page">
   <header class="masthead">
@@ -49,7 +60,7 @@
           <div class="body">
             <p class="fileline"><strong id="send-filecount"></strong> <span id="send-filesize" class="bytes"></span></p>
             <ul id="send-filelist" class="filelist" aria-label="Files to send"></ul>
-            <p class="hint">Give this code to the other side. They enter it under Receive.</p>
+            <p class="hint">Give this 12-character code to the other side. They enter it under Receive. Anyone with the code can download while this tab stays open — share only with someone you trust. Code expires 30 minutes after creation.</p>
             <div class="linkrow">
               <input id="share-link" readonly value="" aria-label="Share link" />
               <button id="copy-link" class="primary" type="button">Copy link</button>
@@ -68,7 +79,7 @@
         </article>
         <figure class="qrwrap">
           <img id="share-qr" alt="QR code for the share link" hidden width="148" height="148" />
-          <figcaption>Scan to open the receive side on a phone.</figcaption>
+          <figcaption>Scan to open the receive side on a phone. Generated locally in your browser — the code never leaves this tab.</figcaption>
         </figure>
       </div>
     </section>
@@ -77,10 +88,10 @@
     <section id="view-receive" aria-label="Receive a file" hidden>
       <form id="receive-form" class="claim">
         <label class="field">Claim code
-          <input id="receive-code" type="text" placeholder="K7Q2XA" autocomplete="off" spellcheck="false" maxlength="8" />
+          <input id="receive-code" type="text" placeholder="K7Q2XA9M4ZD2P" autocomplete="off" spellcheck="false" maxlength="16" />
         </label>
-        <button type="submit" class="primary">Connect and download</button>
-        <p class="hint">Ask the sender for the 6-character code. Their tab must stay open.</p>
+        <button type="submit" class="primary">Connect</button>
+        <p class="hint">Ask the sender for the 12-character code (older 6-character codes still work). Their tab must stay open. Only connect if you trust the sender — files must be downloaded manually, never open executables you did not expect.</p>
       </form>
       <p id="receive-status" class="status" role="status"></p>
       <div class="progressline" id="receive-progressline" hidden>
@@ -96,7 +107,7 @@
 
       <section id="vault" aria-label="Saved on this device" hidden>
         <h2>Saved on this device</h2>
-        <p class="hint">Finished files stay here even if you refresh or close the tab.</p>
+        <p class="hint">Finished files stay here for up to 7 days even if you refresh. Anyone with access to this browser profile can read them — clear after use on shared devices. Clearing also deletes temporary transfer data.</p>
         <ul id="vault-list" class="filelist"></ul>
         <button id="vault-clear" class="quiet" type="button">Clear saved files</button>
       </section>
@@ -104,38 +115,16 @@
   </main>
 
   <footer>
-    <p>Peer-to-peer over WebRTC, introduced by the public PeerJS network. No uploads, no accounts, no storage.</p>
+    <p>Peer-to-peer over WebRTC, introduced by the public PeerJS network. No uploads, no accounts. Verify the sender before connecting — files are never auto-downloaded, always use the per-file Download link.</p>
   </footer>
 </div>
 
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="vendor/peerjs.min.js"></script>
+<script src="vendor/qrcode.min.js"></script>
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/anime.min.js"></script>
 <script src="app.js"></script>
-<script>
-(function () {
-  // Offer a fresh counter once a send completes. app.js owns the transfer
-  // state, so a completed send is observed here and reset via reload.
-  var pct = document.getElementById("send-pct");
-  var again = document.getElementById("send-again");
-  if (!pct || !again || !("MutationObserver" in window)) return;
-  new MutationObserver(function () {
-    if (pct.textContent.trim() === "100%") again.hidden = false;
-  }).observe(pct, { childList: true, characterData: true, subtree: true });
-  again.addEventListener("click", function () { location.reload(); });
-
-  // Keep the switch honest for assistive tech (app.js owns the panels).
-  var s = document.getElementById("tab-send"), r = document.getElementById("tab-receive");
-  function sync() {
-    s.setAttribute("aria-pressed", s.classList.contains("active") ? "true" : "false");
-    r.setAttribute("aria-pressed", r.classList.contains("active") ? "true" : "false");
-  }
-  s.addEventListener("click", sync); r.addEventListener("click", sync);
-
-  // app.js toggles the receive <progress hidden>; mirror it onto the wrapper.
-  var bar = document.getElementById("receive-progress");
-  var wrap = document.getElementById("receive-progressline");
-  new MutationObserver(function () { wrap.hidden = bar.hidden; })
-    .observe(bar, { attributes: true, attributeFilter: ["hidden"] });
-})();
-</script>
+<script src="ui.js"></script>
+<script src="animations.js"></script>
 </body>
 </html>
