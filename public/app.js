@@ -1091,6 +1091,17 @@
     if (pumpStarted || sendCancelled) return;
     if (!openSendConns().length) return;
     pumpStarted = true;
+    // Re-bind the owner if an early onSendDead released it while healthy
+    // channels were still joining: without this, all far-side messages
+    // (progress, receipt ack, cancelled) are silently dropped and the sender
+    // parks at 99% forever next to a Done receiver.
+    if (!sendOwnerPeer) {
+      try { sendOwnerPeer = openSendConns()[0].peer || null; } catch (e) { sendOwnerPeer = null; }
+    }
+    // A pump starting on open channels is live by definition: re-arm here so
+    // a restart after an early onSendDead (first channel dead while healthy
+    // ones still join) can proceed instead of exiting on a stale flag.
+    sendAlive = true;
     setActive(true);
     pokeLive("send");
     pump(files, rows).catch(function (err) {
@@ -1149,14 +1160,16 @@
   }
   // Control messages go on the first open channel that takes them. A single
   // channel can die between open-check and send (PeerJS drops its unsent
-  // queue on close), so retry across the rest before declaring the batch
-  // dead — otherwise one flaky channel stalls everything with no message.
+  // queue on close): mark throwers dead so the live list reflects reality,
+  // retry the rest, and only then declare the batch dead.
   function ctrlSend(msg) {
-    var cons = openSendConns();
-    if (!cons.length) { onSendDead(); return false; }
-    for (var i = 0; i < cons.length; i++) {
-      try { cons[i].send(msg); return true; }
-      catch (e) {}
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var cons = openSendConns();
+      if (!cons.length) break;
+      for (var i = 0; i < cons.length; i++) {
+        try { cons[i].send(msg); return true; }
+        catch (e) { markConnDead(cons[i]); }
+      }
     }
     onSendDead();
     return false;
@@ -1348,8 +1361,18 @@
       }
       setSend(pct, msg);
     }
-    async function readNext() {
-      while (rfi < files.length) {
+    // Control points must not die just because the currently-open channels
+    // are all bad while healthy ones are still connecting (first-meta race).
+    // Wait briefly for any open channel, then let ctrlSend decide honestly.
+    async function ensureOpen() {
+      for (var t = 0; t < 40; t++) {
+        if (genStale() || !sendAlive) return false;
+        if (openSendConns().length) return true;
+        await new Promise(function (r) { setTimeout(r, 250); });
+      }
+      return openSendConns().length > 0;
+    }
+    async function readNext() {      while (rfi < files.length) {
         if (genStale() || !sendAlive) return null;
         if (rdi >= totals[rfi]) { rfi++; rdi = 0; continue; }
         var file = files[rfi], idx = rdi, fidx = rfi;
@@ -1369,7 +1392,7 @@
 
     // First file header goes out before any of its bytes.
     if (genStale() || !sendAlive) return;
-    if (!ctrlSend(metaMsg(files[0], 0, files.length, payload, totals[0]))) return;
+    if (!(await ensureOpen()) || !ctrlSend(metaMsg(files[0], 0, files.length, payload, totals[0]))) return;
     setRow(rows[0], "sending");
 
     while (true) {
@@ -1415,11 +1438,11 @@
       sentPerFile[item.fi]++;
       if (sentPerFile[item.fi] === totals[item.fi] && !fdoneSent[item.fi]) {
         fdoneSent[item.fi] = true;
-        if (!ctrlSend({ t: "fdone", fi: item.fi })) return;
+        if (!(await ensureOpen()) || !ctrlSend({ t: "fdone", fi: item.fi })) return;
         setRow(rows[item.fi], "sent");
         var nx = item.fi + 1;
         if (nx < files.length) {
-          if (!ctrlSend(metaMsg(files[nx], nx, files.length, payload, totals[nx]))) return;
+          if (!(await ensureOpen()) || !ctrlSend(metaMsg(files[nx], nx, files.length, payload, totals[nx]))) return;
           setRow(rows[nx], "sending");
         }
       }
@@ -1429,7 +1452,7 @@
     }
 
     if (genStale() || !sendAlive) return;
-    if (!ctrlSend({ t: "done" })) return;
+    if (!(await ensureOpen()) || !ctrlSend({ t: "done" })) return;
     sendComplete = true;
     clearSendExpiry();
     // Code is deleted only in onRecvAck: until the receipt lands, a receiver
@@ -1709,6 +1732,16 @@
     try { if (recvPeer) recvPeer.destroy(); } catch (e) {}
     setActive(false);
     try { document.getElementById("receive-progress").classList.remove("busy"); } catch (e) {}
+    try {
+      for (var k in rfiles) {
+        if (!Object.prototype.hasOwnProperty.call(rfiles, k)) continue;
+        var fr = rfiles[k];
+        if (fr && !fr.complete) {
+          fr.li.querySelector(".fstate").textContent = "stopped";
+          fr.li.setAttribute("data-state", "stopped");
+        }
+      }
+    } catch (e) {}
     setRecv(msg || "Transfer stopped: invalid data from sender.");
     try { document.getElementById("receive-reconnect").hidden = false; } catch (e) {}
   }
@@ -1768,7 +1801,10 @@
 
   // Receive epoch (see recvGen): stale-entry guard used by continuations.
   function entryLive(f) {
-    return !!(f && f.gen === recvGen && !recvAborted && !f.complete);
+    // Epoch + abort only — NOT f.complete: finish paths set complete=true
+    // and then call finishWithBlob, which must still run (link + vault).
+    // Callers that must skip finished entries check f.complete themselves.
+    return !!(f && f.gen === recvGen && !recvAborted);
   }
   function ensureEntry(fidx) {
     if (!Number.isFinite(fidx) || Math.floor(fidx) !== fidx || fidx < 0 || fidx > MAX_FILE_INDEX) {
@@ -2145,7 +2181,7 @@
   }
 
   function checkEntry(f) {
-    if (!entryLive(f) || !f.meta || !f.fdone) return;
+    if (f.complete || !entryLive(f) || !f.meta || !f.fdone) return;
     if (f.got !== f.total) return;
     if (f.useOpfs) {
       if (!f.writer || f.sealing) return;
@@ -2159,7 +2195,7 @@
   }
 
   function sealOpfsFile(f) {
-    if (!entryLive(f)) return;
+    if (f.complete || !entryLive(f)) return;
     if (f.meta.size > MAX_FILE_SIZE) { abortRecv("Transfer stopped: file too large."); return; }
     f.writer.truncate(f.meta.size).then(function () {
       if (f.gen !== recvGen) return null;
@@ -2187,7 +2223,7 @@
   }
 
   function finishMemoryFile(f) {
-    if (!entryLive(f)) return;
+    if (f.complete || !entryLive(f)) return;
     f.complete = true;
     // Force a safe download type for risky payloads: an attacker mime of
     // text/html + .svg would otherwise render in the blob: origin (which

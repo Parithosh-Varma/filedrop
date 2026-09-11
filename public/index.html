@@ -9,7 +9,7 @@
 <link rel="icon" href="favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="stylesheet" href="styles.css" />
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5555619941305353" crossorigin="anonymous"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com stun:stun.l.google.com turn:eu-0.turn.peerjs.com turn:us-0.turn.peerjs.com; media-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" />
 </head>
 <body>
 <div class="stripe" aria-hidden="true"></div>
@@ -115,57 +115,6 @@
     </section>
   </main>
 
-  <div class="ad-leaderboard" aria-label="Advertisement">
-<script>
-  atOptions = {
-    'key' : '8c8686a2dc9d5959e504c518b3bafc1d',
-    'format' : 'iframe',
-    'height' : 90,
-    'width' : 728,
-    'params' : {}
-  };
-</script>
-<script src="https://www.highrevenueformat.com/8c8686a2dc9d5959e504c518b3bafc1d/invoke.js"></script>
-  </div>
-  <div class="ad-mobile" aria-label="Advertisement">
-<script>
-  atOptions = {
-    'key' : '780013ebcacc8a76ae2389250366c9af',
-    'format' : 'iframe',
-    'height' : 50,
-    'width' : 320,
-    'params' : {}
-  };
-</script>
-<script src="https://www.highrevenueformat.com/780013ebcacc8a76ae2389250366c9af/invoke.js"></script>
-  </div>
-  <div class="ad-towers" aria-label="Advertisement">
-    <div class="ad-tower">
-<script>
-  atOptions = {
-    'key' : '22ea48570d01c9f37a4d9d3c04abcb4c',
-    'format' : 'iframe',
-    'height' : 600,
-    'width' : 160,
-    'params' : {}
-  };
-</script>
-<script src="https://www.highrevenueformat.com/22ea48570d01c9f37a4d9d3c04abcb4c/invoke.js"></script>
-    </div>
-    <div class="ad-tower">
-<script>
-  atOptions = {
-    'key' : 'a357cc2919177db57003b9f3a7831102',
-    'format' : 'iframe',
-    'height' : 300,
-    'width' : 160,
-    'params' : {}
-  };
-</script>
-<script src="https://www.highrevenueformat.com/a357cc2919177db57003b9f3a7831102/invoke.js"></script>
-    </div>
-  </div>
-
   <footer>
     <p>Peer-to-peer over WebRTC, introduced by the public PeerJS network. No uploads, no accounts. Verify the sender before connecting — files are never auto-downloaded, always use the per-file Download link.</p>
     <button id="sound-toggle" class="quiet" type="button" aria-pressed="true"><svg class="snd-icon snd-on" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 6.3a8.2 8.2 0 0 1 0 11.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><svg class="snd-icon snd-off" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" hidden><path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor"/><path d="M15.5 9.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span id="sound-label">Sound on</span></button>
@@ -174,14 +123,14 @@
 
 <div id="toasts" class="toasts" aria-live="polite" aria-label="Notifications"></div>
 
-<script src="vendor/peerjs.min.js"></script>
-<script src="vendor/qrcode.min.js"></script>
-<script src="vendor/gsap.min.js"></script>
-<script src="vendor/anime.min.js"></script>
-<script src="icons.js"></script>
-<script src="app.js"></script>
-<script src="ui.js"></script>
-<script src="animations.js"></script>
-<script src="sounds.js"></script>
+<script src="vendor/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR"></script>
+<script src="vendor/qrcode.min.js" integrity="sha384-lQXOAyZwHXE55JFyrOMB7nY2Wv+m5ZWNtJcHrd1rceRQXAYNLak8ukN5TjBTcIwz"></script>
+<script src="vendor/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt"></script>
+<script src="vendor/anime.min.js" integrity="sha384-fXdIufVbE9aU7STmdk/DWK0imNOozId9fTwzM/gi0NfPjphEIC3gq0M760UnsKVy"></script>
+<script src="icons.js" integrity="sha384-Wuzeb+nznirJhtxywfbNUUG9NWMgbmWMOPJxT5c/5LJwPsxgVn7bMc2rs9azlQCt"></script>
+<script src="app.js" integrity="sha384-kCeHRJRIykFs6e50rQ0Jk37bdoz6BYbbDV9nrRKyqOTTvuPmkXi5l/97Vb2INLtx"></script>
+<script src="ui.js" integrity="sha384-+H1UtKySLnVQ9Xorib9nFhv5kIFjTIewqixmTyjOiEl/mVysR+heBAjc33hXYSy9"></script>
+<script src="animations.js" integrity="sha384-RVl5nxtrM5MNPL2kTeuMAIkTfv4TB/zvACTSel3VpFZO44jZ4NP/eMVUUy8uBQho"></script>
+<script src="sounds.js" integrity="sha384-4XCTlJYgZWhvx4USw822guFVVQooTqHnZ+QM52GXttPY1cMReKOsteMgwyq7CfSU"></script>
 </body>
 </html>
