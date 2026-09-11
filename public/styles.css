@@ -51,7 +51,7 @@ body {
 .switch {
   display: inline-grid;
   grid-template-columns: 1fr 1fr;
-  border: 2px solid var(--red);
+  border: 2px solid var(--ink);
   border-radius: 12px;
   overflow: hidden;
   min-width: min(100%, 340px);
@@ -68,8 +68,8 @@ body {
   cursor: pointer;
 }
 
-.switch button + button { border-left: 2px solid var(--red); }
-.switch button.active { background: var(--red); border-color: var(--red); color: var(--paper); }
+.switch button + button { border-left: 2px solid var(--ink); }
+.switch button.active { background: var(--ink); color: var(--paper); }
 
 /* ---------- send counter ---------- */
 .counter {
@@ -213,11 +213,11 @@ button {
 }
 
 button.primary {
-  background: var(--red);
-  border: 2px solid var(--red);
+  background: var(--blue);
+  border: 2px solid var(--blue);
   color: #fff;
 }
-button.primary:hover { background: #b23222; border-color: #b23222; }
+button.primary:hover { background: #1a47a8; border-color: #1a47a8; }
 
 button.ghost {
   background: transparent;
