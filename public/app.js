@@ -1037,6 +1037,11 @@
         store.del("fd-code-fp");
         document.getElementById("send-status").textContent = "Could not start — drop the files again to retry.";
       } else {
+        // Signaling errors (network, socket, server) are non-fatal once data
+        // connections are open — bytes travel P2P over WebRTC, not via the
+        // PeerJS server. Do not overwrite live transfer progress with a
+        // generic "Peer error" that makes the user think the transfer died.
+        if (sendAlive && sendConns.some(connOpen)) return;
         document.getElementById("send-status").textContent = "Peer error: " + String(t).slice(0, 64);
       }
     });
@@ -1104,7 +1109,16 @@
     sendAlive = true;
     setActive(true);
     pokeLive("send");
-    pump(files, rows).catch(function (err) {
+    pump(files, rows).then(function () {
+      // Pump exited normally without completing (e.g. ensureOpen timed out,
+      // ctrlSend failed, or genStale tripped). Without this reset,
+      // pumpStarted stays true forever and maybeStartPump can never restart
+      // the pump on a later connection — the sender parks at "sending…"
+      // with no data flowing.
+      if (!sendComplete && !sendAcked && !sendCancelled) {
+        pumpStarted = false;
+      }
+    }).catch(function (err) {
       // Allow a later fresh connection to restart; otherwise the receiver
       // waits forever after a local read failure.
       pumpStarted = false;
@@ -1716,6 +1730,11 @@
       // failures in UI (avoids a code-enumeration oracle). Details to console.
       try { if (window.console) window.console.warn("peer error", err && err.type); } catch (e) {}
       if (recvAborted) return;
+      // If data connections are already open (transfer underway), a signaling
+      // error is non-fatal — data channels are P2P and survive server
+      // disconnects. Do not overwrite the live progress with "Could not
+      // connect", which would look like the transfer is stuck.
+      if (recvConns.some(connOpen)) return;
       setActive(false);
       setRecv("Could not connect. Check the code — the sender tab must stay open — then try again.");
     });
