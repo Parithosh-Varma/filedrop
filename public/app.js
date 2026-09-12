@@ -51,6 +51,26 @@
   var LOW_WATERMARK = 1 * 1048576;
   var PREFETCH = 4;
   var UI_MS = 150;
+  // PeerJS normally supplies ICE servers, but some deployments and networks
+  // fail before a usable candidate is gathered. Keep the public PeerJS
+  // signaling path and add a standard STUN fallback for the data path.
+  var PEER_OPTIONS = {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        {
+          urls: [
+            "turn:eu-0.turn.peerjs.com:3478",
+            "turn:us-0.turn.peerjs.com:3478"
+          ],
+          username: "peerjs",
+          credential: "peerjsp"
+        }
+      ]
+    }
+  };
 
   // ---------- security limits ----------
   var CODE_LEN = 12;
@@ -1025,7 +1045,7 @@
       document.getElementById("send-status").textContent = "Could not start: networking library failed to load. Reload the page and try again.";
       return;
     }
-    sendPeer = new Peer(peerId, { debug: 0 });
+    sendPeer = new Peer(peerId, PEER_OPTIONS);
     sendPeer.on("error", function (err) {
       var t = (err && err.type) || "";
       if (t === "unavailable-id") {
@@ -1705,7 +1725,7 @@
     setRecv("Connecting… keep this tab open.", 0);
 
     var prefix = prefixForCode(code);
-    recvPeer = new Peer({ debug: 0 });
+    recvPeer = new Peer(PEER_OPTIONS);
     recvPeer.on("open", function () {
       if (recvAborted) return;
       // SAS for MITM detection (sender shows the same value).
