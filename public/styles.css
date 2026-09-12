@@ -497,7 +497,7 @@ footer { will-change: transform, opacity; }
 @media (max-width: 520px) {
   .orb-a { width: 220px; height: 220px; }
   .orb-b { width: 190px; height: 190px; }
-  .fx-plane.p2, .fx-plane.p3 { display: none; }
+  .fx-plane { display: none; }
 }
 
 /* ---------- custom svg icons (no emoji anywhere in the UI) ---------- */
