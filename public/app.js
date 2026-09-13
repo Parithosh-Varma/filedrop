@@ -1023,9 +1023,9 @@
 
   function shareSendUi(code) {
     document.getElementById("share-code").textContent = code;
-    var link = location.origin + location.pathname + "?code=" + code;
+    var link = location.origin + location.pathname + "?code=" + code + "&auto=1";
     // file:// or sandboxed preview has opaque origin — fall back to href base
-    if (!/^https?:/.test(link)) link = location.href.split("?")[0] + "?code=" + code;
+    if (!/^https?:/.test(link)) link = location.href.split("?")[0] + "?code=" + code + "&auto=1";
     document.getElementById("share-link").value = link;
     // QR scans auto-start (&auto=1); the copied link stays manual.
     renderQrLocal(link + "&auto=1");
