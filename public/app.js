@@ -51,23 +51,19 @@
   var LOW_WATERMARK = 1 * 1048576;
   var PREFETCH = 4;
   var UI_MS = 150;
-  // PeerJS normally supplies ICE servers, but some deployments and networks
-  // fail before a usable candidate is gathered. Keep the public PeerJS
-  // signaling path and add a standard STUN fallback for the data path.
+  // ICE servers: public PeerJS signaling is kept, but PeerJS's bundled TURN
+  // (*.turn.peerjs.com) is DNS-dead (NOERROR + zero records via 1.1.1.1 DoH)
+  // so it was removed — dead entries only stall gathering. Google STUN covers
+  // direct/NAT-assisted paths; symmetric-NAT/CGNAT pairs NEED a relay and
+  // stall at ICE "checking" with relay=0 in the census until a live TURN is
+  // configured (Metered free tier via runtime-fetched iceServers is the
+  // documented static-compatible path — see AGENTS.md).
   var PEER_OPTIONS = {
     debug: 0,
     config: {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        {
-          urls: [
-            "turn:eu-0.turn.peerjs.com:3478",
-            "turn:us-0.turn.peerjs.com:3478"
-          ],
-          username: "peerjs",
-          credential: "peerjsp"
-        }
+        { urls: "stun:stun1.l.google.com:19302" }
       ]
     }
   };
@@ -199,6 +195,7 @@
     recvSession = "";
     recvOpfsRoot = null; recvOpfsTried = false;
     allDoneMsg = false; firstMetaSeen = false; lastRecvUi = 0;
+    firstDataSeen = false;
     setActive(false);
     document.getElementById("receive-filelist").innerHTML = "";
     document.getElementById("receive-status").textContent = "";
@@ -590,23 +587,53 @@
     liveTimers[which] = setTimeout(function () { el.setAttribute("data-live", "off"); }, 2500);
   }
 
+  // First-byte diagnostics: milestone-only console breadcrumbs (a dozen lines
+  // per transfer, never per chunk) so a "connected but silent" repro can be
+  // located in seconds from either tab's console instead of guessed at.
+  function diag() {
+    try {
+      if (window.console && console.info) console.info.apply(console, ["[filedrop]"].concat(Array.prototype.slice.call(arguments)));
+    } catch (e) {}
+  }
+  function diagWarn() {
+    try {
+      if (window.console && console.warn) console.warn.apply(console, ["[filedrop]"].concat(Array.prototype.slice.call(arguments)));
+    } catch (e) {}
+  }
+
   // ---------- favicon signal (red→blue gradient tile while a transfer is live) ----------
   // Shows a red-to-blue gradient version of the mark so a transfer in progress
-  // is visible even when the tab is backgrounded. Restores the original icon
+  // is visible even when the tab is backgrounded. The gradient shifts from
+  // red (0 %) to blue (100 %) as progress advances, giving a slow visual
+  // transition tied to the actual transfer state. Restores the original icon
   // when done.
   var faviconLink = document.querySelector('link[rel="icon"]');
   var faviconHrefOrig = faviconLink ? faviconLink.href : "";
-  function paintFaviconBusy() {
+  var faviconLastPct = -1;
+  function lerpColor(a, b, t) {
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t)
+    ];
+  }
+  function paintFaviconBusy(pct) {
     try {
+      if (pct == null) pct = 0;
+      pct = Math.max(0, Math.min(100, pct));
+      // Skip redundant repaints (saves CPU on rapid progress ticks)
+      if (pct === faviconLastPct) return;
+      faviconLastPct = pct;
       var c = document.createElement("canvas");
       c.width = 64; c.height = 64;
       var g = c.getContext("2d");
       if (!g || !faviconLink) return;
-      var grad = g.createLinearGradient(0, 0, 64, 64);
-      grad.addColorStop(0, "#d43d2a");
-      grad.addColorStop(1, "#2456c8");
+      // Interpolate background from red (#d43d2a) to blue (#2456c8) by pct
+      var t = pct / 100;
+      var rgb = lerpColor([0xd4, 0x3d, 0x2a], [0x24, 0x56, 0xc8], t);
+      var bg = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
       g.clearRect(0, 0, 64, 64);
-      g.fillStyle = grad;
+      g.fillStyle = bg;
       g.beginPath();
       if (g.roundRect) g.roundRect(2, 2, 60, 60, 14);
       else g.rect(2, 2, 60, 60);
@@ -625,8 +652,8 @@
       g.closePath();
       g.fill();
       g.stroke();
-      // hollow cutout (same gradient, aligned to canvas space)
-      g.fillStyle = grad;
+      // hollow cutout (same background, aligned to canvas space)
+      g.fillStyle = bg;
       g.beginPath();
       g.moveTo(25, 31);
       g.lineTo(41, 23);
@@ -637,10 +664,12 @@
     } catch (e) {}
   }
   function startFaviconStrobe() {
+    faviconLastPct = -1;
     if (!faviconLink) return;
-    paintFaviconBusy();
+    paintFaviconBusy(0);
   }
   function stopFaviconStrobe() {
+    faviconLastPct = -1;
     try { if (faviconLink) faviconLink.href = faviconHrefOrig; } catch (e) {}
   }
 
@@ -729,6 +758,10 @@
   var sendPeer = null, sendConns = [], sendCancelled = false;
   var sendAlive = false, sendComplete = false, sendTotalBytes = 0, sendDoneBytes = 0;
   var pumpStarted = false;
+  // 'open' backstop poller (see armOpenPoll): one shared interval per batch
+  // that retries maybeStartPump briefly after a new connection, in case the
+  // PeerJS 'open' event was missed. Self-clearing; also cleared in cleanupSend.
+  var openPollTimer = null;
   // Last negotiated data payload size: only used to interpret PeerJS's
   // message-count bufferSize when no byte counters are visible (tests).
   var lastPayload = 0;
@@ -753,6 +786,14 @@
   dz.addEventListener("dragleave", function () { dz.classList.remove("over"); });
   dz.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); try { fi.click(); } catch (err) {} }
+  });
+  dz.addEventListener("click", function (e) {
+    // Let the label's native click trigger the file picker. Only fire
+    // fi.click() when the click landed on the dropzone itself (not on the
+    // label/input, which already works natively).
+    if (e.target === dz || e.target.closest(".counter-title") || e.target.closest(".counter-note")) {
+      try { fi.click(); } catch (err) {}
+    }
   });
   dz.addEventListener("drop", function (e) {
     e.preventDefault(); dz.classList.remove("over");
@@ -818,6 +859,7 @@
     hideSas();
     pumpStarted = false;
     sendOwnerPeer = null;
+    if (openPollTimer) { try { clearInterval(openPollTimer); } catch (e) {} openPollTimer = null; }
     sendAcked = false;
     mirPct = -1; mirAt = 0; mirDone = 0; mirTotal = 0;
     clearSendAckTimer();
@@ -1046,6 +1088,7 @@
       return;
     }
     sendPeer = new Peer(peerId, PEER_OPTIONS);
+    sendPeer.on("open", function (id) { diag("sender: peer open, id=" + id); });
     sendPeer.on("error", function (err) {
       var t = (err && err.type) || "";
       if (t === "unavailable-id") {
@@ -1085,6 +1128,7 @@
         try { showSas("send", code, peerId, sendOwnerPeer); } catch (e) {}
       }
       sendConns.push(conn);
+      diag("sender: incoming connection from " + peer + " (total=" + sendConns.length + ")");
       try {
         if (conn.dataChannel) conn.dataChannel.bufferedAmountLowThreshold = LOW_WATERMARK;
       } catch (e) {}
@@ -1096,7 +1140,10 @@
     if (sendStopTimer) { try { clearTimeout(sendStopTimer); } catch (e0) {} sendStopTimer = null; } }
       document.getElementById("send-status").textContent = "Other side connected — sending…";
       document.getElementById("send-progress").classList.remove("busy");
-      conn.on("open", function () { maybeStartPump(sendFiles, rows); });
+      conn.on("open", function () {
+        diag("sender: channel open (open=" + openSendConns().length + "/" + sendConns.length + ")");
+        maybeStartPump(sendFiles, rows);
+      });
       // Only the bound owner may steer the sender (received/cancelled/progress).
       // PeerJS data callbacks carry no conn handle, so bind the check here.
       (function (ownerAtAccept, c) {
@@ -1106,10 +1153,77 @@
         });
       })(peer, conn);
       conn.on("close", onSendDead);
-      conn.on("error", onSendDead);
+      conn.on("error", function (err) {
+        diagWarn("sender: channel error (" + ((err && err.type) || "unknown") + ")");
+        onSendDead();
+      });
+      // ICE observability: strictly additive listeners (addEventListener,
+      // never overwriting PeerJS's own on* handlers) so a media-path stall
+      // names itself: connection states plus a host/srflx/relay candidate
+      // census when gathering finishes. Zero relay candidates + a stall
+      // means TURN is unreachable from this network.
+      (function (c) {
+        try {
+          var pc = c.peerConnection;
+          if (!pc || !pc.addEventListener) return;
+          var cand = { host: 0, srflx: 0, relay: 0, other: 0 };
+          pc.addEventListener("iceconnectionstatechange", function () {
+            diag("sender: ICE connection -> " + pc.iceConnectionState);
+          });
+          pc.addEventListener("connectionstatechange", function () {
+            diag("sender: peer connection -> " + pc.connectionState);
+          });
+          pc.addEventListener("icecandidate", function (e) {
+            if (!e.candidate) {
+              diag("sender: ICE candidates (host/srflx/relay) = " +
+                cand.host + "/" + cand.srflx + "/" + cand.relay);
+              return;
+            }
+            var m = / typ ([a-z]+)/.exec(String(e.candidate.candidate || ""));
+            var t = (m && m[1]) || "other";
+            if (cand[t] == null) t = "other";
+            cand[t]++;
+          });
+        } catch (e) {}
+      })(conn);
       // Some PeerJS versions deliver 'connection' already open.
       if (connOpen(conn)) maybeStartPump(sendFiles, rows);
+      // Backstop in case the 'open' event above is missed (channel already
+      // open when handlers attach, or a PeerJS/browser combo drops it):
+      // without this the sender parks at "sending…" with zero bytes flowing
+      // while the receiver waits forever. maybeStartPump is idempotent.
+      armOpenPoll(sendFiles, rows);
     });
+  }
+
+  // 'open' backstop (see above): one shared bounded poller per batch. It
+  // clears itself once the pump starts, the batch is torn down, the
+  // generation turns over (re-drop/reload), or the 10s budget (matching
+  // ensureOpen) runs out — whichever comes first.
+  function armOpenPoll(files, rows) {
+    if (openPollTimer) return;
+    var g = sendGen;
+    var ticks = 0;
+    openPollTimer = setInterval(function () {
+      ticks++;
+      if (g !== sendGen || pumpStarted || sendCancelled || !sendAlive) {
+        try { clearInterval(openPollTimer); } catch (e) {}
+        openPollTimer = null;
+        return;
+      }
+      if (ticks > 40) {
+        try { clearInterval(openPollTimer); } catch (e2) {}
+        openPollTimer = null;
+        // Your repro lands here: connections accepted, none ever opened.
+        if (sendAlive) diagWarn("sender: still no open channel after 10s (connections=" + sendConns.length + ")");
+        return;
+      }
+      try { maybeStartPump(files, rows); } catch (e) {}
+      if (pumpStarted) {
+        try { clearInterval(openPollTimer); } catch (e2) {}
+        openPollTimer = null;
+      }
+    }, 250);
   }
 
   function maybeStartPump(files, rows) {
@@ -1224,6 +1338,7 @@
   function setSend(pct, msg) {
     document.getElementById("send-progress").value = pct;
     document.getElementById("send-pct").textContent = pct.toFixed(0) + "%";
+    try { paintFaviconBusy(pct); } catch (e) {}
     if (msg) {
       gateSr("send-status", msg, pct);
       document.getElementById("send-status").textContent = msg;
@@ -1368,6 +1483,9 @@
     var doneBytes = 0;
     sendDoneBytes = 0;
     var sendFailCount = 0;
+    var firstChunkLogged = false;
+    var lastAdvance = Date.now(); // last successful byte handoff (stall watchdog)
+    var stallNudged = false;
     var queue = [];
     var rfi = 0, rdi = 0, eof = false;
     var lastUi = 0;
@@ -1426,7 +1544,12 @@
 
     // First file header goes out before any of its bytes.
     if (genStale() || !sendAlive) return;
-    if (!(await ensureOpen()) || !ctrlSend(metaMsg(files[0], 0, files.length, payload, totals[0]))) return;
+    if (!(await ensureOpen())) { diagWarn("sender: no open channel for first meta"); return; }
+    diag("sender: pump started, files=" + files.length + ", payload=" + payload);
+    if (!ctrlSend(metaMsg(files[0], 0, files.length, payload, totals[0]))) {
+      diagWarn("sender: first meta send failed");
+      return;
+    }
     setRow(rows[0], "sending");
 
     while (true) {
@@ -1447,13 +1570,30 @@
         cons = openSendConns();
         if (!cons.length) { onSendDead(); return; }
       }
+      // Honest stall signal: the pump is alive with open channels but not a
+      // single byte has been handed off for 30s (and the receiver isn't
+      // reporting progress either). One nudge only — never an abort, and
+      // never while the receiver's own numbers are fresh.
+      if (!stallNudged && doneBytes < totalBytes && Date.now() - lastAdvance > 30000 &&
+          !(mirPct >= 0 && Date.now() - mirAt < 2000)) {
+        stallNudged = true;
+        diagWarn("sender: no bytes handed off for 30s with open channels");
+        ui(totalBytes ? Math.min(99, (doneBytes / totalBytes) * 100) : 0,
+          "Still trying — keep both tabs open and in the foreground. If it persists, ask the receiver to tap Reconnect.", true);
+      }
       if (genStale() || !sendAlive) return;
       cons.sort(function (a, b) { return connBuffered(a) - connBuffered(b); });
       var item = queue.shift();
       try {
         cons[0].send(frameChunk(item.fi, item.i, item.buf));
         sendFailCount = 0;
+        lastAdvance = Date.now();
+        if (!firstChunkLogged) {
+          firstChunkLogged = true;
+          diag("sender: first chunk handed off (" + item.buf.byteLength + " bytes)");
+        }
       } catch (e) {
+        diagWarn("sender: chunk send threw (" + String((e && e.message) || e).slice(0, 80) + ")");
         queue.unshift(item);
         // Three strikes and the channel is out of the rotation: a truly dead
         // conn must not keep winning the sort (its buffer reads empty), but
@@ -1545,6 +1685,7 @@
   // counters, rows, or vault.
   var recvGen = 0;
   var allDoneMsg = false, firstMetaSeen = false, lastRecvUi = 0;
+  var firstDataSeen = false; // any onData payload arrived (shape logged once)
   var doneStallTimer = null;
   var recvAttempts = [];
   var recvAborted = false;
@@ -1626,6 +1767,7 @@
     try { document.getElementById("receive-progressline").hidden = false; } catch (e) {}
     bar.value = pct;
     document.getElementById("receive-pct").textContent = pct.toFixed(0) + "%";
+    try { paintFaviconBusy(pct); } catch (e) {}
   }
 
   function setRecvThrottled(msg, pct, force) {
@@ -1718,16 +1860,40 @@
     recvOpfsRoot = null; recvOpfsTried = false;
     rGrandTotal = 0; lastProgSent = 0;
     allDoneMsg = false; firstMetaSeen = false; lastRecvUi = 0;
+    firstDataSeen = false;
     document.getElementById("receive-filelist").innerHTML = "";
     document.getElementById("receive-cancel").hidden = false;
     document.getElementById("receive-progress").classList.add("busy");
     setActive(true);
     setRecv("Connecting… keep this tab open.", 0);
+    // Silent-connection watchdog: channels open but zero metas/bytes means
+    // the sender's pump never started or its bytes never arrive. Never park
+    // at "waiting" forever — name it with a next step. Epoch-guarded so a
+    // reconnect retires the previous session's timer.
+    (function (g) {
+      setTimeout(function () {
+        if (g !== recvGen || recvAborted || firstMetaSeen || rDoneBytes > 0) return;
+        if (!recvConns.some(connOpen)) {
+          // Pure ICE stall: onRecvDead only fires when an opened channel
+          // closes, so without this the UI parks at "Connecting…" forever.
+          // Name the usual culprits (VPN / ad-blocker / strict network
+          // blocking WebRTC) with a same-device fallback that needs no TURN.
+          diagWarn("receiver: no open channel after 25s");
+          setActive(false);
+          setRecv("Could not establish a connection. Keep the sender tab open — if it is, a VPN, ad-blocker, or strict network may be blocking it. Try disabling them, or test with two tabs on this device.", 0);
+          try { document.getElementById("receive-reconnect").hidden = false; } catch (e) {}
+          return;
+        }
+        diagWarn("receiver: channels open but no data after 25s");
+        setRecv("Still connected but no data yet — keep this tab open and in the foreground, and ask the sender to do the same. If nothing arrives, tap Reconnect.", 0);
+      }, 25000);
+    })(recvGen);
 
     var prefix = prefixForCode(code);
     recvPeer = new Peer(PEER_OPTIONS);
     recvPeer.on("open", function () {
       if (recvAborted) return;
+      diag("receiver: peer open, id=" + recvPeer.id + ", dialing " + NUM_CHANNELS + " channels");
       // SAS for MITM detection (sender shows the same value).
       try { showSas("receive", code, prefix + code, recvPeer.id); } catch (e) {}
       var opened = 0;
@@ -1737,11 +1903,40 @@
           recvConns.push(conn);
           conn.on("open", function () {
             opened++;
+            diag("receiver: channel " + k + " open (" + opened + "/" + NUM_CHANNELS + ")");
             if (opened === 1) setRecv("Connected — waiting for the first file…", 0);
           });
           conn.on("data", onData);
           conn.on("close", onRecvDead);
-          conn.on("error", function () {});
+          conn.on("error", function (err) {
+            diagWarn("receiver: channel " + k + " error (" + ((err && err.type) || "unknown") + ")");
+          });
+          // Same additive ICE observability as the sender side (see there
+          // for rationale). Per-channel so a single bad channel stands out.
+          (function (c, kk) {
+            try {
+              var pc = c.peerConnection;
+              if (!pc || !pc.addEventListener) return;
+              var cand = { host: 0, srflx: 0, relay: 0, other: 0 };
+              pc.addEventListener("iceconnectionstatechange", function () {
+                diag("receiver: ch" + kk + " ICE connection -> " + pc.iceConnectionState);
+              });
+              pc.addEventListener("connectionstatechange", function () {
+                diag("receiver: ch" + kk + " peer connection -> " + pc.connectionState);
+              });
+              pc.addEventListener("icecandidate", function (e) {
+                if (!e.candidate) {
+                  diag("receiver: ch" + kk + " ICE candidates (host/srflx/relay) = " +
+                    cand.host + "/" + cand.srflx + "/" + cand.relay);
+                  return;
+                }
+                var m = / typ ([a-z]+)/.exec(String(e.candidate.candidate || ""));
+                var t = (m && m[1]) || "other";
+                if (cand[t] == null) t = "other";
+                cand[t]++;
+              });
+            } catch (e) {}
+          })(conn, k);
         })(k);
       }
     });
@@ -2091,6 +2286,19 @@
 
   function onData(d) {
     if (recvAborted || !d) return;
+    // Log the first payload's shape once: if bytes ever arrive in a shape
+    // none of the branches below handle, that — not the network — is why a
+    // transfer sits at 0%, and the console will say so.
+    if (!firstDataSeen) {
+      firstDataSeen = true;
+      try {
+        var shape = (typeof ArrayBuffer !== "undefined" && d instanceof ArrayBuffer) ? "ArrayBuffer:" + d.byteLength
+          : (typeof Uint8Array !== "undefined" && d instanceof Uint8Array) ? "Uint8Array:" + d.byteLength
+          : (typeof Blob !== "undefined" && d instanceof Blob) ? "Blob:" + d.size
+          : (d && typeof d === "object") ? "object t=" + d.t : typeof d;
+        diag("receiver: first data arrived (" + shape + ")");
+      } catch (e) {}
+    }
     if (typeof ArrayBuffer !== "undefined" && d instanceof ArrayBuffer) { onBinary(d); return; }
     if (typeof Uint8Array !== "undefined" && d instanceof Uint8Array) {
       if (d.byteLength > MAX_PAYLOAD + MAX_BIN_SLOP + HEADER) {
@@ -2109,7 +2317,12 @@
       d.arrayBuffer().then(function (b) { if (g === recvGen && !recvAborted) onBinary(b); }).catch(function () {});
       return;
     }
-    if (typeof d === "object" && d.t) onControl(d);
+    if (typeof d === "object" && d.t) { onControl(d); return; }
+    // Anything reaching here is silently dropped below — say so loudly
+    // instead: an unknown shape means a sender/PeerJS serialization mismatch.
+    try {
+      diagWarn("receiver: unhandled data shape, keys=" + Object.keys(d).slice(0, 8).join(","));
+    } catch (e) { diagWarn("receiver: unhandled data shape"); }
   }
 
   function onBinary(buf) {

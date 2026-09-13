@@ -92,6 +92,7 @@ body {
   padding: 0.65rem 1rem;
   cursor: pointer;
   min-width: 0;
+  touch-action: manipulation;
 }
 
 .switch button + button { border-left: 2px solid var(--ink); }
@@ -117,8 +118,10 @@ body {
 .filelink { color: var(--blue); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .filelink:focus-within { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
 
-/* Visually hidden but keyboard-focusable (unlike `hidden`). */
-.vh-input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Visually hidden but keyboard-focusable and tap-friendly (unlike `hidden`).
+   iOS Safari ignores clicks on inputs hidden via clip/position:absolute, so we
+   use opacity:0 + size:1px instead — still invisible but tappable. */
+.vh-input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; opacity: 0; pointer-events: none; border: 0; }
 
 /* Inline batch-rejection state: red-tinted, impossible to miss, dropzone stays. */
 .send-error {
@@ -459,7 +462,7 @@ footer p { color: var(--ink-soft); font-size: 0.85rem; margin: 0; max-width: 60c
 @keyframes state-pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
 
 /* Buttons: magnetic + ripple */
-button { position: relative; overflow: hidden; will-change: transform; }
+button { position: relative; overflow: hidden; will-change: transform; touch-action: manipulation; }
 button.fx-press { animation: btn-press 0.18s ease; }
 @keyframes btn-press { 50% { transform: scale(0.96); } }
 .fx-ripple { position: absolute; border-radius: 50%; background: currentColor; opacity: 0.25; transform: scale(0); pointer-events: none; }
