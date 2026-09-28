@@ -16,10 +16,10 @@ Browser-to-browser transfer. No backend, no R2/KV/Functions, no build step.
 
 ```bash
 # from repo root
-npx wrangler pages deploy filedrop/ --project-name=filedrop
+npx wrangler pages deploy ./public --project-name=fdrop
 ```
 
-Or via dashboard: Pages → Create → Upload assets → drag `filedrop/` contents.
+Or via dashboard: Pages → Create → Upload assets → drag `public/` contents.
 
 Local preview:
 
@@ -40,5 +40,5 @@ npx wrangler pages deploy ./public --project-name=fdrop --force
 
 - Transfer is live-only (no offline storage). For offline/store-and-forward, add an R2 bucket + Pages Function later.
 - Large files (100s of MB) work but keep tabs in foreground; mobile browsers may throttle.
-- QR is generated locally (`public/vendor/qrcode.min.js`) — claim codes never leave the tab. Link/code works without QR.
-- Dependencies are vendored, no CDN at runtime: `public/vendor/peerjs.min.js` (1.5.4), `qrcode.min.js`, plus animation libs. No `unpkg`/`qrserver` fetches.
+- QR is generated locally (`public/vendor/qrcode.min.js`) — claim codes never leave the tab. Link/code works without QR. The QR encodes `?code=XXXX&auto=1` and auto-connects on open; copied share links stay manual (no `auto` flag).
+- Dependencies are vendored, no CDN at runtime except the AdSense loader (`pagead2.googlesyndication.com`, see `public/index.html` + CSP `script-src` exception): `public/vendor/peerjs.min.js` (1.5.4), `qrcode.min.js`, plus animation libs. No `unpkg`/`qrserver` fetches.
