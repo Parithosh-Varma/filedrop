@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>The Threshold Moved — A HyperFrames Documentary</title>
+  <script src="assets/gsap.min.js"></script>
+  <style>
+    @font-face {
+      font-family: "Space Grotesk";
+      src: url("assets/fonts/grotesk-latin.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 400 700;
+    }
+    @font-face {
+      font-family: "Space Mono";
+      src: url("assets/fonts/mono-400-latin.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: "Space Mono";
+      src: url("assets/fonts/mono-700-latin.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 700;
+    }
+    :root {
+      --void: #030507;
+      --deep: #071015;
+      --panel: #0a1419;
+      --paper: #eef5f2;
+      --muted: #7e9294;
+      --cyan: #72f0d4;
+      --cyan-dim: #1e8d82;
+      --ice: #c8fff1;
+      --amber: #ffb25b;
+      --red: #ff5d57;
+      --line: rgba(126, 146, 148, 0.22);
+      --sans: "Space Grotesk", Arial, sans-serif;
+      --mono: "Space Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--void); color: var(--paper); font-family: var(--sans); }
+    #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--void); }
+    .scene { position: absolute; inset: 0; overflow: hidden; }
+    .world { position: absolute; inset: 0; overflow: hidden; opacity: 0; background: var(--void); }
+    .bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 72% 44%, rgba(36, 167, 145, 0.13), transparent 33%),
+        radial-gradient(circle at 25% 78%, rgba(255, 178, 91, 0.055), transparent 28%),
+        linear-gradient(135deg, #030507 0%, #061014 55%, #030507 100%);
+    }
+    .grid {
+      position: absolute; inset: -12%; opacity: 0.23;
+      background-image: linear-gradient(rgba(114,240,212,.11) 1px, transparent 1px), linear-gradient(90deg, rgba(114,240,212,.11) 1px, transparent 1px);
+      background-size: 84px 84px;
+      mask-image: radial-gradient(ellipse at 55% 50%, black 5%, transparent 72%);
+    }
+    .scanlines {
+      position: absolute; inset: 0; pointer-events: none; opacity: .1;
+      background: repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0, rgba(255,255,255,.045) 1px, transparent 1px, transparent 5px);
+      mix-blend-mode: screen;
+    }
+    .vignette { position: absolute; inset: 0; box-shadow: inset 0 0 180px 55px #000; pointer-events: none; }
+    .grain {
+      position: absolute; inset: -50%; width: 200%; height: 200%; opacity: .10; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.72'/%3E%3C/svg%3E");
+      transform: rotate(7deg);
+    }
+    .chrome { position: absolute; inset: 0; pointer-events: none; z-index: 40; }
+    .chapter { position: absolute; left: 84px; top: 64px; display: flex; gap: 16px; align-items: center; font: 700 15px var(--mono); letter-spacing: .2em; color: var(--cyan); text-transform: uppercase; }
+    .chapter::before { content: ""; width: 42px; height: 2px; background: currentColor; }
+    .timecode { position: absolute; right: 82px; top: 62px; font: 400 14px var(--mono); letter-spacing: .12em; color: var(--muted); }
+    .source { position: absolute; left: 84px; bottom: 49px; font: 400 13px var(--mono); letter-spacing: .075em; color: var(--muted); }
+    .source strong { color: var(--paper); font-weight: 400; }
+    .edge-index { position: absolute; right: 82px; bottom: 48px; font: 700 14px var(--mono); letter-spacing: .16em; color: var(--cyan); }
+    .frame-line { position: absolute; left: 84px; right: 82px; bottom: 84px; height: 1px; background: linear-gradient(90deg, var(--cyan), rgba(114,240,212,.06)); opacity: .5; }
+    .eyebrow { font: 700 16px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--cyan); margin: 0 0 26px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 0; font-size: 112px; line-height: .93; letter-spacing: -.065em; max-width: 1170px; }
+    h2 { margin-bottom: 0; font-size: 82px; line-height: .98; letter-spacing: -.055em; }
+    h3 { margin-bottom: 0; font-size: 28px; line-height: 1.1; letter-spacing: -.02em; }
+    .lede { font-size: 27px; line-height: 1.45; color: #b6c5c3; max-width: 710px; }
+    .mono { font-family: var(--mono); }
+    .block { display: block; }
+    .block + .block { margin-top: .34em; }
+    #s01 h1 span + span { margin-top: .34em; }
+    .accent { color: var(--cyan); }
+    .danger { color: var(--red); }
+    .amber { color: var(--amber); }
+    .rule { width: 100px; height: 3px; background: var(--cyan); transform-origin: left center; }
+    .glass { background: rgba(7, 16, 21, .72); border: 1px solid rgba(114,240,212,.22); box-shadow: 0 24px 80px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.04); }
+    .pill { display: inline-flex; align-items: center; gap: 12px; border: 1px solid rgba(114,240,212,.35); border-radius: 999px; padding: 11px 18px; font: 700 13px var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--cyan); }
+    .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 18px currentColor; }
+
+    /* 01 — opening threshold */
+    #s01 .copy { position: absolute; left: 166px; top: 260px; z-index: 4; }
+    #s01 .copy h1 span { display: block; }
+    #s01 .subline { margin: 35px 0 0 7px; display: flex; align-items: center; gap: 22px; color: #9db0b0; font-size: 23px; }
+    .aperture { position: absolute; width: 980px; height: 980px; right: -160px; top: 60px; }
+    .aperture .ring { position: absolute; border: 1px solid rgba(114,240,212,.22); border-radius: 50%; inset: 12%; }
+    .aperture .r2 { inset: 24%; border-color: rgba(114,240,212,.34); border-style: dashed; }
+    .aperture .r3 { inset: 36%; border-color: rgba(255,178,91,.32); }
+    .aperture .core { position: absolute; inset: 45%; border-radius: 50%; background: var(--paper); box-shadow: 0 0 25px #fff, 0 0 110px 45px rgba(114,240,212,.52); }
+    .aperture .orbit { position: absolute; width: 15px; height: 15px; border-radius: 50%; background: var(--cyan); left: 48.8%; top: 11.4%; box-shadow: 0 0 24px var(--cyan); }
+    .aperture .cross-x, .aperture .cross-y { position: absolute; background: rgba(114,240,212,.17); }
+    .aperture .cross-x { left: 0; right: 0; top: 50%; height: 1px; }
+    .aperture .cross-y { top: 0; bottom: 0; left: 50%; width: 1px; }
+
+    /* 02 — Glasswing */
+    #s02 .copy { position: absolute; left: 145px; top: 190px; width: 650px; z-index: 3; }
+    #s02 .stat { position: absolute; left: 900px; top: 212px; z-index: 3; }
+    #s02 .big { font: 700 194px/.8 var(--sans); letter-spacing: -.085em; color: var(--paper); }
+    #s02 .plus { color: var(--cyan); }
+    #s02 .stat-label { margin-top: 38px; width: 650px; font: 400 20px/1.5 var(--mono); color: #9db0b0; text-transform: uppercase; letter-spacing: .08em; }
+    .vuln-field { position: absolute; left: 820px; right: 80px; top: 120px; bottom: 140px; }
+    .vuln-dot { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px rgba(114,240,212,.7); opacity: .48; }
+    .shield-mark { width: 120px; height: 140px; margin-top: 42px; position: relative; border: 2px solid rgba(114,240,212,.5); border-radius: 60px 60px 42px 42px; clip-path: polygon(50% 0, 94% 17%, 88% 72%, 50% 100%, 12% 72%, 6% 17%); }
+    .shield-mark::after { content: ""; position: absolute; inset: 20px; border: 1px solid rgba(114,240,212,.25); clip-path: inherit; background: radial-gradient(circle, rgba(114,240,212,.22), transparent 66%); }
+
+    /* 03 — release / distribution */
+    #s03 .hero-word { position: absolute; left: 112px; top: 225px; font: 700 160px/.8 var(--sans); letter-spacing: -.08em; color: rgba(238,245,242,.96); white-space: nowrap; }
+    #s03 .hero-word .outline { color: rgba(3,5,7,.72); -webkit-text-stroke: 1.5px rgba(114,240,212,.6); }
+    #s03 .copy { position: absolute; left: 117px; top: 640px; width: 660px; }
+    #s03 .copy p { font-size: 29px; line-height: 1.35; color: #b8c6c4; }
+    .weight-core { position: absolute; right: 290px; top: 350px; width: 250px; height: 250px; transform-style: preserve-3d; }
+    .weight-core .cube { position: absolute; inset: 0; border: 2px solid var(--cyan); box-shadow: inset 0 0 70px rgba(114,240,212,.12), 0 0 70px rgba(114,240,212,.16); }
+    .weight-core .cube::before, .weight-core .cube::after { content: ""; position: absolute; inset: 34px; border: 1px solid rgba(114,240,212,.4); }
+    .weight-core .cube::after { inset: 78px; background: rgba(114,240,212,.13); }
+    .dist-node { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 22px var(--cyan); }
+    .dist-line { position: absolute; width: 2px; height: 260px; transform-origin: 50% 100%; background: linear-gradient(transparent, rgba(114,240,212,.5)); left: 50%; bottom: 50%; }
+
+    /* 04 — ExploitBench */
+    #s04 .head { position: absolute; left: 126px; top: 145px; width: 950px; }
+    #s04 .head h2 { font-size: 72px; }
+    .bench { position: absolute; left: 128px; right: 128px; top: 390px; bottom: 150px; display: grid; grid-template-columns: 1fr 1fr; gap: 84px; align-items: end; }
+    .bar-group { height: 100%; display: grid; grid-template-columns: 185px 1fr; gap: 32px; align-items: end; border-bottom: 1px solid rgba(238,245,242,.24); }
+    .bar { height: 100%; transform-origin: bottom; background: linear-gradient(180deg, var(--cyan), rgba(30,141,130,.25)); border: 1px solid rgba(114,240,212,.7); position: relative; box-shadow: 0 0 50px rgba(114,240,212,.13); }
+    .bar.mythos { background: linear-gradient(180deg, #eef5f2, rgba(126,146,148,.22)); border-color: rgba(238,245,242,.6); }
+    .bar .pct { position: absolute; left: 0; bottom: calc(100% + 20px); font: 700 62px/1 var(--sans); letter-spacing: -.06em; }
+    .bar-meta { align-self: end; padding-bottom: 24px; }
+    .bar-meta .name { font: 700 22px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+    .bar-meta .tries { margin-top: 12px; font: 400 16px/1.5 var(--mono); color: var(--muted); }
+    .near-zero { position: absolute; right: 150px; top: 198px; font: 400 15px var(--mono); color: var(--muted); letter-spacing: .06em; }
+
+    /* 05 — four percent */
+    #s05 .copy { position: absolute; left: 150px; top: 210px; width: 720px; }
+    #s05 .copy h2 { font-size: 76px; }
+    #s05 .copy .lede { margin-top: 35px; }
+    .ring-stat { position: absolute; width: 580px; height: 580px; right: 190px; top: 190px; }
+    .ring-stat svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+    .ring-stat circle { fill: none; stroke-width: 12; }
+    .ring-stat .track { stroke: rgba(126,146,148,.16); }
+    .ring-stat .value { stroke: var(--amber); stroke-linecap: round; stroke-dasharray: 1445; stroke-dashoffset: 1445; filter: drop-shadow(0 0 11px rgba(255,178,91,.55)); }
+    .ring-stat .ring-copy { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+    .ring-stat .num { font: 700 152px/.9 var(--sans); letter-spacing: -.085em; }
+    .ring-stat .desc { margin-top: 22px; font: 700 14px/1.5 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--amber); max-width: 300px; }
+
+    /* 06 — exploit chain */
+    #s06 .head { position: absolute; left: 122px; top: 138px; }
+    #s06 .head h2 { font-size: 68px; max-width: 1050px; }
+    .browser { position: absolute; left: 126px; right: 126px; top: 340px; height: 490px; border: 1px solid rgba(114,240,212,.28); background: rgba(4,10,13,.82); box-shadow: 0 32px 100px rgba(0,0,0,.5); }
+    .browser-top { height: 58px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 11px; padding: 0 22px; }
+    .browser-top i { display: block; width: 10px; height: 10px; border: 1px solid var(--muted); border-radius: 50%; }
+    .url { margin-left: 18px; height: 29px; width: 72%; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font: 400 12px/27px var(--mono); padding-left: 14px; }
+    .chain { position: absolute; left: 70px; right: 70px; top: 125px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 54px; }
+    .chain-node { height: 220px; padding: 29px 24px; position: relative; border: 1px solid rgba(114,240,212,.28); background: rgba(10,20,25,.82); }
+    .chain-node::after { content: ""; position: absolute; width: 54px; height: 1px; background: var(--cyan); right: -55px; top: 50%; box-shadow: 0 0 10px var(--cyan); }
+    .chain-node:last-child::after { display: none; }
+    .chain-node .n { font: 700 13px var(--mono); color: var(--cyan); letter-spacing: .13em; }
+    .chain-node h3 { margin-top: 34px; font-size: 29px; }
+    .chain-node p { margin-top: 14px; font: 400 14px/1.5 var(--mono); color: var(--muted); }
+    .chain-node.hot { border-color: rgba(255,93,87,.65); box-shadow: inset 0 0 50px rgba(255,93,87,.08); }
+    .chain-node.hot .n { color: var(--red); }
+
+    /* 07 — economics */
+    #s07 .head { position: absolute; left: 130px; top: 155px; width: 670px; }
+    #s07 .head h2 { font-size: 84px; }
+    #s07 .head p { margin-top: 33px; }
+    .economics { position: absolute; left: 860px; right: 120px; top: 180px; bottom: 150px; display: grid; grid-template-rows: repeat(3, 1fr); gap: 18px; }
+    .econ-row { display: grid; grid-template-columns: 265px 1fr; align-items: center; padding: 0 38px; border-left: 2px solid var(--cyan); }
+    .econ-row:nth-child(2) { border-color: var(--paper); }
+    .econ-row:nth-child(3) { border-color: var(--amber); }
+    .econ-num { font: 700 78px/.9 var(--sans); letter-spacing: -.07em; }
+    .econ-label { font: 400 17px/1.5 var(--mono); color: #a4b6b5; text-transform: uppercase; letter-spacing: .08em; }
+    .clock-rings { position: absolute; width: 780px; height: 780px; right: 16px; top: 110px; opacity: .18; }
+    .clock-rings i { position: absolute; inset: 10%; border: 1px solid var(--cyan); border-radius: 50%; }
+    .clock-rings i:nth-child(2) { inset: 23%; border-style: dashed; }
+    .clock-rings i:nth-child(3) { inset: 36%; }
+
+    /* 08 — control */
+    #s08 .question { position: absolute; left: 122px; top: 165px; font: 400 20px var(--mono); color: var(--cyan); letter-spacing: .17em; text-transform: uppercase; }
+    #s08 h2 { position: absolute; left: 120px; top: 230px; width: 960px; font-size: 110px; }
+    #s08 .answer { position: absolute; left: 128px; top: 690px; display: flex; align-items: baseline; gap: 28px; }
+    #s08 .zero { font: 700 140px/.8 var(--sans); letter-spacing: -.08em; }
+    #s08 .label { font: 700 16px/1.5 var(--mono); color: var(--muted); letter-spacing: .14em; text-transform: uppercase; max-width: 300px; }
+    .lock { position: absolute; width: 420px; height: 520px; right: 250px; top: 220px; }
+    .lock-body { position: absolute; left: 46px; right: 46px; bottom: 0; height: 330px; border: 2px solid rgba(114,240,212,.62); background: rgba(7,16,21,.7); box-shadow: inset 0 0 80px rgba(114,240,212,.08), 0 0 80px rgba(114,240,212,.1); }
+    .lock-loop { position: absolute; width: 240px; height: 245px; left: 90px; top: 0; border: 18px solid var(--cyan); border-bottom: 0; border-radius: 130px 130px 0 0; opacity: .75; }
+    .lock-key { position: absolute; width: 36px; height: 90px; left: 192px; top: 298px; background: var(--cyan); clip-path: polygon(50% 0,100% 35%,72% 56%,72% 100%,28% 100%,28% 56%,0 35%); box-shadow: 0 0 30px rgba(114,240,212,.5); }
+    .lock-cut { position: absolute; width: 630px; height: 4px; right: 145px; top: 483px; background: var(--red); box-shadow: 0 0 18px var(--red); transform-origin: left center; }
+
+    /* 09 — bypass ladder */
+    #s09 .head { position: absolute; left: 124px; top: 128px; }
+    #s09 .head h2 { font-size: 70px; }
+    .ladder { position: absolute; left: 128px; right: 128px; top: 350px; height: 470px; display: grid; grid-template-columns: repeat(4,1fr); gap: 22px; align-items: end; }
+    .step { position: relative; height: var(--h); transform-origin: bottom; padding: 28px 24px; border: 1px solid rgba(255,93,87,.4); background: linear-gradient(180deg, rgba(255,93,87,.28), rgba(255,93,87,.04)); box-shadow: inset 0 1px rgba(255,255,255,.05); }
+    .step:first-child { border-color: rgba(114,240,212,.35); background: rgba(114,240,212,.04); }
+    .step .pct { font: 700 76px/.9 var(--sans); letter-spacing: -.075em; }
+    .step .method { position: absolute; left: 24px; bottom: -82px; font: 700 14px/1.45 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #c2cfcd; }
+    .step .method small { display: block; margin-top: 7px; color: var(--muted); font-weight: 400; letter-spacing: .04em; }
+
+    /* 10 — abliteration */
+    #s10 .copy { position: absolute; left: 124px; top: 170px; width: 680px; }
+    #s10 .copy h2 { font-size: 82px; }
+    #s10 .copy .lede { margin-top: 34px; }
+    .model-core { position: absolute; width: 680px; height: 680px; right: 80px; top: 150px; }
+    .model-core .shell { position: absolute; inset: 13%; border: 2px solid rgba(114,240,212,.55); border-radius: 50%; box-shadow: inset 0 0 80px rgba(114,240,212,.1); }
+    .model-core .shell::before, .model-core .shell::after { content: ""; position: absolute; inset: 14%; border: 1px dashed rgba(114,240,212,.34); border-radius: 50%; }
+    .model-core .shell::after { inset: 28%; border-style: solid; background: radial-gradient(circle, rgba(114,240,212,.42), rgba(114,240,212,.05) 42%, transparent 68%); }
+    .model-core .slice { position: absolute; height: 12px; left: 4%; right: 4%; top: 49%; background: var(--red); box-shadow: 0 0 28px var(--red); transform-origin: left center; }
+    .model-core .slice-label { position: absolute; right: 5%; top: 43%; font: 700 13px var(--mono); color: var(--red); letter-spacing: .13em; }
+    .refusal { position: absolute; right: 880px; bottom: 178px; display: flex; align-items: center; gap: 24px; font: 700 40px var(--mono); }
+    .refusal .old { color: var(--muted); text-decoration: line-through; }
+    .refusal .arrow { color: var(--cyan); }
+    .refusal .new { color: var(--red); font-size: 78px; }
+
+    /* 11 — dual use */
+    #s11 .axis { position: absolute; left: 50%; top: 120px; bottom: 115px; width: 1px; background: linear-gradient(transparent, rgba(238,245,242,.32), transparent); }
+    #s11 .half { position: absolute; top: 0; bottom: 0; width: 50%; padding: 175px 95px 150px; }
+    #s11 .left { left: 0; text-align: right; background: radial-gradient(circle at 90% 50%, rgba(255,93,87,.11), transparent 43%); }
+    #s11 .right { right: 0; background: radial-gradient(circle at 10% 50%, rgba(114,240,212,.12), transparent 43%); }
+    #s11 .half h2 { font-size: 92px; }
+    #s11 .half p { margin-top: 38px; display: inline-block; font-size: 24px; line-height: 1.45; max-width: 580px; color: #aebfbd; }
+    .dual-orbit { position: absolute; width: 230px; height: 230px; left: calc(50% - 115px); top: 425px; border: 1px solid rgba(238,245,242,.35); border-radius: 50%; z-index: 5; }
+    .dual-orbit::before { content: ""; position: absolute; inset: 31%; border-radius: 50%; background: var(--paper); box-shadow: -42px 0 70px var(--red), 42px 0 70px var(--cyan); }
+    .dual-orbit .orbit-dot { position: absolute; width: 15px; height: 15px; border-radius: 50%; background: var(--paper); left: calc(50% - 7px); top: -8px; box-shadow: 0 0 22px #fff; }
+
+    /* 12 — access and safeguards */
+    #s12 .head { position: absolute; left: 124px; top: 140px; width: 1050px; }
+    #s12 .head h2 { font-size: 76px; }
+    #s12 .formula { position: absolute; left: 124px; top: 380px; display: flex; align-items: center; gap: 38px; font: 700 82px/.9 var(--sans); letter-spacing: -.05em; }
+    #s12 .formula .x { font: 400 38px var(--mono); color: var(--muted); }
+    .actions { position: absolute; left: 126px; right: 126px; bottom: 145px; display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+    .action { min-height: 205px; padding: 32px; border-top: 2px solid var(--cyan); background: rgba(10,20,25,.62); }
+    .action:nth-child(2) { border-color: var(--paper); }
+    .action:nth-child(3) { border-color: var(--amber); }
+    .action .n { font: 700 13px var(--mono); color: var(--muted); letter-spacing: .13em; }
+    .action h3 { margin-top: 32px; font-size: 27px; }
+    .action p { margin: 13px 0 0; color: var(--muted); font: 400 14px/1.5 var(--mono); }
+
+    /* 13 — finale */
+    #s13 .final-copy { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; z-index: 5; padding-bottom: 44px; }
+    #s13 .final-copy h2 { font-size: 118px; line-height: .9; max-width: 1420px; }
+    #s13 .final-copy .eyebrow { margin-bottom: 34px; }
+    #s13 .question { margin: 44px auto 0; max-width: 1040px; font-size: 28px; line-height: 1.45; color: #aebfbd; }
+    #s13 .question strong { color: var(--paper); }
+    .global-net { position: absolute; inset: 60px 0 80px; opacity: .44; }
+    .global-net svg { width: 100%; height: 100%; }
+    .global-net path { fill: none; stroke: rgba(114,240,212,.38); stroke-width: 1.2; stroke-dasharray: 5 9; }
+    .global-net circle { fill: var(--cyan); filter: drop-shadow(0 0 7px rgba(114,240,212,.7)); }
+    .final-rule { width: 0; height: 2px; background: var(--cyan); margin: 50px auto 0; box-shadow: 0 0 15px var(--cyan); }
+
+    .micro-label { position: absolute; padding: 8px 12px; border: 1px solid var(--line); color: var(--muted); font: 400 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div id="root" data-composition-id="the-threshold-moved" data-start="0" data-width="1920" data-height="1080" data-duration="180" data-fps="30">
+    <audio id="narration" src="assets/narration-final.m4a" data-start="1" data-duration="178.55" data-track-index="40" data-volume="1"></audio>
+    <audio id="score" src="assets/score.m4a" data-start="0" data-duration="180" data-track-index="41" data-volume="0.16"></audio>
+
+    <section id="s01" class="scene clip" data-layout-allow-overlap data-start="0" data-duration="14" data-track-index="1">
+      <div class="world">
+        <div class="bg"></div><div class="grid" data-layout-allow-overflow></div>
+        <div class="aperture" data-layout-allow-overflow>
+          <i class="ring r1"></i><i class="ring r2"></i><i class="ring r3"></i><i class="core"></i><i class="orbit"></i><i class="cross-x"></i><i class="cross-y"></i>
+        </div>
+        <div class="copy">
+          <p class="eyebrow">Anthropic / Frontier Red Team</p>
+          <h1 data-layout-allow-overlap><span>The threshold</span><span class="accent">moved.</span></h1>
+          <div class="subline"><span class="rule"></span><span>Advanced cyber capability is spreading.</span></div>
+        </div>
+        <div class="chrome"><div class="chapter">Prologue</div><div class="timecode">00:00:00</div><div class="frame-line"></div><div class="source">Based on <strong>Anthropic Research · Sep 29, 2026</strong></div><div class="edge-index">01 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s02" class="scene clip" data-layout-allow-overlap data-start="13" data-duration="14" data-track-index="2">
+      <div class="world">
+        <div class="bg"></div><div class="vuln-field" id="vuln-field"></div>
+        <div class="copy">
+          <p class="eyebrow">The defender's head start</p>
+          <h2 data-layout-allow-overlap>Five months of borrowed time.</h2>
+          <div class="shield-mark"></div>
+        </div>
+        <div class="stat"><div class="big"><span id="vuln-counter">10,000</span><span class="plus">+</span></div><div class="stat-label">vulnerabilities found by trusted defenders through Project Glasswing</div></div>
+        <div class="chrome"><div class="chapter">Containment</div><div class="timecode">00:00:13</div><div class="frame-line"></div><div class="source">Source: <strong>Anthropic · Project Glasswing</strong></div><div class="edge-index">02 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s03" class="scene clip" data-layout-allow-overlap data-start="26" data-duration="15" data-track-index="3">
+      <div class="world">
+        <div class="bg"></div><div class="grid" data-layout-allow-overflow></div>
+        <div class="hero-word">OPEN <span class="outline">WEIGHTS</span></div>
+        <div class="copy"><p>The same class of exploit-building capability is now <span class="accent">downloadable.</span></p><span class="pill"><i class="dot"></i> GLM-5.3 · unrestricted distribution</span></div>
+        <div class="weight-core" id="weight-core"><div class="cube"></div></div>
+        <div class="chrome"><div class="chapter">Proliferation</div><div class="timecode">00:00:26</div><div class="frame-line"></div><div class="source">Finding: <strong>Frontier capability, broadly accessible</strong></div><div class="edge-index">03 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s04" class="scene clip" data-layout-allow-overlap data-start="40" data-duration="16" data-track-index="4">
+      <div class="world">
+        <div class="bg"></div><div class="grid" data-layout-allow-overflow></div>
+        <div class="head"><p class="eyebrow">ExploitBench · Chrome V8</p><h2 data-layout-allow-overlap><span class="block">Near-frontier results.</span><span class="block">No frontier gate.</span></h2></div>
+        <div class="near-zero">EARLIER MODELS · AT OR NEAR 0%</div>
+        <div class="bench">
+          <div class="bar-group"><div class="bar glm" style="height:72%"><div class="pct"><span id="glm-pct">12</span>%</div></div><div class="bar-meta"><div class="name accent">GLM-5.3</div><div class="tries"><span class="block">50 / 410 attempts</span><span class="block">working end-to-end exploit</span></div></div></div>
+          <div class="bar-group"><div class="bar mythos" style="height:84%"><div class="pct"><span id="mythos-pct">14</span>%</div></div><div class="bar-meta"><div class="name">Claude Mythos Preview</div><div class="tries"><span class="block">56 / 410 attempts</span><span class="block">restricted trusted access</span></div></div></div>
+        </div>
+        <div class="chrome"><div class="chapter">The benchmark</div><div class="timecode">00:00:40</div><div class="frame-line"></div><div class="source">Source: <strong>ExploitBench · 41 Chrome V8 bugs</strong></div><div class="edge-index">04 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s05" class="scene clip" data-layout-allow-overlap data-start="55" data-duration="14" data-track-index="5">
+      <div class="world">
+        <div class="bg"></div>
+        <div class="copy"><p class="eyebrow">Binary exploitation</p><h2 data-layout-allow-overlap><span class="block">Small number.</span><span class="block">Meaningful threshold.</span></h2><p class="lede">Earlier tested models scored zero. Here, full credit means a complete control-flow hijack.</p></div>
+        <div class="ring-stat"><svg viewBox="0 0 520 520" aria-hidden="true"><circle class="track" cx="260" cy="260" r="230"></circle><circle class="value" id="four-ring" cx="260" cy="260" r="230"></circle></svg><div class="ring-copy"><div class="num"><span id="four-pct">4</span>%</div><div class="desc">full control-flow hijacks</div></div></div>
+        <div class="chrome"><div class="chapter">A line crossed</div><div class="timecode">00:00:55</div><div class="frame-line"></div><div class="source">Source: <strong>Anthropic Binary Exploitation benchmark · 100 tasks</strong></div><div class="edge-index">05 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s06" class="scene clip" data-layout-allow-overlap data-start="68" data-duration="15" data-track-index="6">
+      <div class="world">
+        <div class="bg"></div>
+        <div class="head"><p class="eyebrow">Researcher-guided test · isolated target</p><h2 data-layout-allow-overlap>From unknown flaw to working chain.</h2></div>
+        <div class="browser">
+          <div class="browser-top"><i></i><i></i><i></i><div class="url">isolated://browser-target / offline sandbox</div></div>
+          <div class="chain">
+            <div class="chain-node"><div class="n">01 · DISCOVER</div><h3>Unknown flaw</h3><p>JavaScript engine vulnerability identified</p></div>
+            <div class="chain-node"><div class="n">02 · COMPOSE</div><h3>Exploit chain</h3><p>Multiple weaknesses linked together</p></div>
+            <div class="chain-node hot"><div class="n">03 · ESCAPE</div><h3>Sandbox exit</h3><p>Browser isolation boundary crossed</p></div>
+            <div class="chain-node hot"><div class="n">04 · ACCESS</div><h3>File read</h3><p>Sensitive local data reached</p></div>
+          </div>
+        </div>
+        <div class="chrome"><div class="chapter">End to end</div><div class="timecode">00:01:08</div><div class="frame-line"></div><div class="source">Test condition: <strong>offline target · findings disclosed to maintainer</strong></div><div class="edge-index">06 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s07" class="scene clip" data-layout-allow-overlap data-start="82" data-duration="15" data-track-index="7">
+      <div class="world">
+        <div class="bg"></div><div class="clock-rings"><i></i><i></i><i></i></div>
+        <div class="head"><p class="eyebrow">The economics invert</p><h2 data-layout-allow-overlap><span class="block">Cheap.</span><span class="block">Patient.</span><span class="accent block">Reproducible.</span></h2><p class="lede">A known Chrome flaw became a reliable ARM64 exploit chain.</p></div>
+        <div class="economics">
+          <div class="econ-row glass"><div class="econ-num">20 min</div><div class="econ-label">of human attention</div></div>
+          <div class="econ-row glass"><div class="econ-num">8 hours</div><div class="econ-label">of model work</div></div>
+          <div class="econ-row glass"><div class="econ-num amber">$20.40</div><div class="econ-label">at the provider's API prices</div></div>
+        </div>
+        <div class="chrome"><div class="chapter">Time and cost</div><div class="timecode">00:01:22</div><div class="frame-line"></div><div class="source">Case: <strong>CVE-2026-11645 + second known flaw</strong></div><div class="edge-index">07 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s08" class="scene clip" data-layout-allow-overlap data-start="96" data-duration="14" data-track-index="8">
+      <div class="world">
+        <div class="bg"></div><div class="grid" data-layout-allow-overflow></div>
+        <div class="question">The deeper issue is not performance alone</div><h2 data-layout-allow-overlap><span class="block">It is</span><span class="accent block">control.</span></h2>
+        <div class="answer"><div class="zero">0%</div><div class="label">engagement on a direct malicious order</div></div>
+        <div class="lock"><div class="lock-loop"></div><div class="lock-body"></div><div class="lock-key"></div></div><div class="lock-cut"></div>
+        <div class="chrome"><div class="chapter">Safeguards</div><div class="timecode">00:01:36</div><div class="frame-line"></div><div class="source">Simulated test: <strong>50 samples per condition</strong></div><div class="edge-index">08 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s09" class="scene clip" data-layout-allow-overlap data-start="109" data-duration="16" data-track-index="9">
+      <div class="world">
+        <div class="bg"></div>
+        <div class="head"><p class="eyebrow danger">Simple techniques · sharp escalation</p><h2 data-layout-allow-overlap>From refusal to engagement.</h2></div>
+        <div class="ladder">
+          <div class="step" style="--h:21%"><div class="pct">0%</div><div class="method">Bare order<small>released model</small></div></div>
+          <div class="step" style="--h:54%"><div class="pct">64%</div><div class="method">False cover story<small>deceptive context</small></div></div>
+          <div class="step" style="--h:78%"><div class="pct">92%</div><div class="method">Prefilled reasoning<small>decision implied</small></div></div>
+          <div class="step" style="--h:100%"><div class="pct danger">100%</div><div class="method">Abliterated<small>refusals removed</small></div></div>
+        </div>
+        <div class="chrome"><div class="chapter">The bypass ladder</div><div class="timecode">00:01:49</div><div class="frame-line"></div><div class="source">Finding: <strong>GLM-5.3 harmful-task engagement rate</strong></div><div class="edge-index">09 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s10" class="scene clip" data-layout-allow-overlap data-start="124" data-duration="15" data-track-index="10">
+      <div class="world">
+        <div class="bg"></div><div class="grid" data-layout-allow-overflow></div>
+        <div class="copy"><p class="eyebrow danger">Abliteration</p><h2 data-layout-allow-overlap>The safeguard can be <span class="danger">edited out.</span></h2><p class="lede">Refusal falls. General capability remains largely intact.</p></div>
+        <div class="model-core"><div class="shell"></div><div class="slice"></div><div class="slice-label">SAFETY LAYER / REMOVED</div></div>
+        <div class="refusal"><span class="old">95%</span><span class="arrow">→</span><span class="new">6%</span><span style="font-size:14px;color:var(--muted);max-width:150px;line-height:1.4">MEAN REFUSAL RATE</span></div>
+        <div class="chrome"><div class="chapter">Weights change the threat model</div><div class="timecode">00:02:04</div><div class="frame-line"></div><div class="source">Benchmarks: <strong>JailbreakBench · HarmBench · StrongREJECT</strong></div><div class="edge-index">10 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s11" class="scene clip" data-layout-allow-overlap data-start="138" data-duration="14" data-track-index="11">
+      <div class="world">
+        <div class="bg"></div><div class="axis"></div>
+        <div class="half left"><p class="eyebrow danger">The attacker</p><h2 data-layout-allow-overlap><span class="block">Find a</span><span class="block">way in.</span></h2><p>Capability compresses specialized offensive work into hours.</p></div>
+        <div class="half right"><p class="eyebrow">The defender</p><h2 data-layout-allow-overlap><span class="block">Find it</span><span class="accent block">first.</span></h2><p>The same models can discover flaws before they are exploited.</p></div>
+        <div class="dual-orbit"><i class="orbit-dot"></i></div>
+        <div class="chrome"><div class="chapter">One capability · two directions</div><div class="timecode">00:02:18</div><div class="frame-line"></div><div class="source">Dual use: <strong>the advantage goes to whoever moves first</strong></div><div class="edge-index">11 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s12" class="scene clip" data-layout-allow-overlap data-start="151" data-duration="15" data-track-index="12">
+      <div class="world">
+        <div class="bg"></div><div class="grid" data-layout-allow-overflow></div>
+        <div class="head"><p class="eyebrow">What preparation requires</p><h2 data-layout-allow-overlap><span class="block">Access and safeguards</span><span class="block">must move together.</span></h2></div>
+        <div class="formula"><span class="accent">ACCESS</span><span class="x">×</span><span>SAFEGUARDS</span></div>
+        <div class="actions">
+          <div class="action"><div class="n">01 / TEST</div><h3>Independent safety evaluations</h3><p>Measure capability and misuse resistance before release.</p></div>
+          <div class="action"><div class="n">02 / EQUIP</div><h3>Expand trusted defender access</h3><p>Give security teams tools at least as capable as their adversaries.</p></div>
+          <div class="action"><div class="n">03 / DESIGN</div><h3>Build safety into capability</h3><p>Treat safeguards as architecture, not a removable shell.</p></div>
+        </div>
+        <div class="chrome"><div class="chapter">The response</div><div class="timecode">00:02:31</div><div class="frame-line"></div><div class="source">Research conclusion: <strong>evaluate · equip · safeguard</strong></div><div class="edge-index">12 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+
+    <section id="s13" class="scene clip" data-layout-allow-overlap data-start="165" data-duration="15" data-track-index="13">
+      <div class="world">
+        <div class="bg"></div><div class="global-net"><svg viewBox="0 0 1920 900" aria-hidden="true"><path id="net-path-a" d="M-40 600 C260 410 410 640 690 430 S1110 240 1320 420 S1660 680 1990 390"/><path id="net-path-b" d="M-30 260 C260 500 530 170 830 350 S1250 620 1530 300 S1780 210 1970 520"/><circle cx="220" cy="470" r="5"/><circle cx="470" cy="335" r="5"/><circle cx="690" cy="430" r="6"/><circle cx="980" cy="345" r="5"/><circle cx="1245" cy="385" r="6"/><circle cx="1500" cy="500" r="5"/><circle cx="1720" cy="390" r="6"/></svg></div>
+        <div class="final-copy"><p class="eyebrow">The era is not approaching</p><h2 data-layout-allow-overlap><span class="block">THE CAPABILITY</span><span class="accent block">IS DISTRIBUTING.</span></h2><p class="question">Who moves first: <strong>those searching for a way in</strong>, or <strong>those racing to close it?</strong></p><div class="final-rule"></div></div>
+        <div class="chrome"><div class="chapter">Epilogue</div><div class="timecode">00:02:45</div><div class="frame-line"></div><div class="source">The window to prepare is measured <strong>in releases.</strong></div><div class="edge-index">13 / 13</div></div>
+        <div class="scanlines"></div><div class="grain"></div><div class="vignette"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+      window.__timelines = window.__timelines || {};
+
+      // Deterministic, authored detail fields — no render-time randomness.
+      var field = document.getElementById("vuln-field");
+      for (var i = 0; i < 168; i++) {
+        var d = document.createElement("i");
+        d.className = "vuln-dot";
+        d.style.left = ((i * 47) % 101) + "%";
+        d.style.top = ((i * 73 + (i % 9) * 11) % 97) + "%";
+        d.style.opacity = String(0.18 + (i % 7) * 0.09);
+        field.appendChild(d);
+      }
+
+      var core = document.getElementById("weight-core");
+      var nodeData = [[-260,-215],[-330,40],[-240,280],[285,-245],[350,5],[270,260],[-30,-340],[40,350]];
+      nodeData.forEach(function (p, idx) {
+        var line = document.createElement("i");
+        line.className = "dist-line";
+        line.setAttribute("data-layout-allow-orbit", "");
+        var angle = Math.atan2(p[1], p[0]) * 180 / Math.PI + 90;
+        var len = Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+        line.style.height = len + "px";
+        line.style.transform = "rotate(" + angle + "deg)";
+        core.appendChild(line);
+        var n = document.createElement("i");
+        n.className = "dist-node dn-" + idx;
+        n.style.left = (120 + p[0]) + "px";
+        n.style.top = (120 + p[1]) + "px";
+        core.appendChild(n);
+      });
+
+      var tl = gsap.timeline({ paused: true });
+      gsap.defaults({ ease: "power3.out" });
+
+      function scene(id, start, duration) {
+        var w = id + " .world";
+        tl.fromTo(w, { opacity: 0 }, { opacity: 1, duration: 0.85, ease: "power2.inOut", immediateRender: false }, start);
+        tl.to(w, { opacity: 0, duration: 0.85, ease: "power2.inOut" }, start + duration - 1.8);
+      }
+      scene("#s01", 0, 14); scene("#s02", 13, 14); scene("#s03", 26, 15); scene("#s04", 40, 16);
+      scene("#s05", 55, 14); scene("#s06", 68, 15); scene("#s07", 82, 15); scene("#s08", 96, 14);
+      scene("#s09", 109, 16); scene("#s10", 124, 15); scene("#s11", 138, 14); scene("#s12", 151, 15); scene("#s13", 165, 15);
+
+      // 01 — restrained title build + continuous orbital mechanics.
+      tl.from("#s01 .eyebrow", { opacity: 0, y: 18, duration: .7 }, .7)
+        .from("#s01 h1 span", { opacity: 0, y: 70, rotationX: -16, duration: 1.15, stagger: .17 }, 1.05)
+        .from("#s01 .subline", { opacity: 0, x: -45, duration: .8 }, 2.1)
+        .from("#s01 .rule", { scaleX: 0, duration: .9 }, 2.15)
+        .from("#s01 .aperture", { opacity: 0, scale: .68, rotation: -24, duration: 2.1, ease: "expo.out" }, .3)
+        .to("#s01 .aperture .r2", { rotation: 190, duration: 12, ease: "none" }, 1)
+        .to("#s01 .aperture .orbit", { rotation: 360, transformOrigin: "10px 380px", duration: 11.5, ease: "none" }, 1)
+        .to("#s01 .aperture .core", { scale: 1.35, opacity: .7, duration: 2.2, repeat: 3, yoyo: true, ease: "sine.inOut" }, 2.4);
+
+      // 02 — vulnerability constellation and count.
+      tl.from("#s02 .copy > *", { opacity: 0, x: -42, duration: .85, stagger: .15, immediateRender: false }, 13.7)
+        .from("#s02 .stat", { opacity: 0, scale: .9, duration: 1.1, immediateRender: false }, 14.2)
+        .from("#s02 .vuln-dot", { opacity: 0, scale: 0, duration: .7, stagger: { each: .018, from: "center" }, immediateRender: false }, 13.4)
+        .fromTo("#s02 #vuln-counter", { innerText: 0 }, { innerText: 10000, snap: { innerText: 1 }, duration: 2.6, ease: "power2.out", immediateRender: false }, 14.0)
+        .to("#s02 .shield-mark", { scale: 1.07, duration: 1.4, repeat: 5, yoyo: true, ease: "sine.inOut" }, 16.5)
+        .to("#s02 .vuln-field", { x: 34, y: -18, duration: 11.5, ease: "none" }, 13.2);
+
+      // 03 — a closed core distributing outward.
+      tl.from("#s03 .hero-word", { opacity: 0, x: -90, duration: 1.05, immediateRender: false }, 26.6)
+        .from("#s03 .copy > *", { opacity: 0, y: 35, duration: .8, stagger: .16, immediateRender: false }, 27.3)
+        .from("#s03 .weight-core", { opacity: 0, scale: .55, rotation: -20, duration: 1.4, immediateRender: false }, 26.4)
+        .to("#s03 .cube", { rotation: 135, scale: .84, duration: 9.5, ease: "power1.inOut" }, 28)
+        .from("#s03 .dist-line", { scaleY: 0, opacity: 0, duration: 1.1, stagger: .11, immediateRender: false }, 28.2)
+        .from("#s03 .dist-node", { opacity: 0, scale: 0, duration: .65, stagger: .11, immediateRender: false }, 28.8)
+        .to("#s03 .dist-node", { scale: 1.7, duration: 1.2, stagger: .09, repeat: 3, yoyo: true, ease: "sine.inOut" }, 31);
+
+      // 04 — bars grow from the baseline.
+      tl.from("#s04 .head > *", { opacity: 0, y: 36, duration: .85, stagger: .13, immediateRender: false }, 40.65)
+        .from("#s04 .bar", { scaleY: 0, duration: 1.5, stagger: .22, ease: "expo.out", immediateRender: false }, 41.7)
+        .from("#s04 .bar-meta", { opacity: 0, x: 25, duration: .75, stagger: .18, immediateRender: false }, 42.35)
+        .from("#s04 .near-zero", { opacity: 0, duration: .7, immediateRender: false }, 44)
+        .fromTo("#s04 #glm-pct", { innerText: 0 }, { innerText: 12, snap: { innerText: 1 }, duration: 1.3, immediateRender: false }, 41.65)
+        .fromTo("#s04 #mythos-pct", { innerText: 0 }, { innerText: 14, snap: { innerText: 1 }, duration: 1.3, immediateRender: false }, 41.9);
+
+      // 05 — four percent arc draws, then holds like an instrument dial.
+      tl.from("#s05 .copy > *", { opacity: 0, x: -45, duration: .85, stagger: .15, immediateRender: false }, 55.7)
+        .from("#s05 .ring-stat", { opacity: 0, scale: .78, duration: 1.15, immediateRender: false }, 55.8)
+        .to("#s05 #four-ring", { strokeDashoffset: 1387, duration: 2.1, ease: "expo.out" }, 56.2)
+        .from("#s05 .ring-copy > *", { opacity: 0, scale: .8, duration: .8, stagger: .14, immediateRender: false }, 57)
+        .to("#s05 .ring-stat", { rotation: 6, duration: 9.5, ease: "none" }, 58.7);
+
+      // 06 — exploit chain assembles left to right.
+      tl.from("#s06 .head > *", { opacity: 0, y: 30, duration: .8, stagger: .14, immediateRender: false }, 68.6)
+        .from("#s06 .browser", { opacity: 0, y: 70, scale: .96, duration: 1.05, immediateRender: false }, 69.1)
+        .from("#s06 .chain-node", { opacity: 0, x: -34, duration: .75, stagger: .55, immediateRender: false }, 70.2)
+        .to("#s06 .chain-node.hot", { borderColor: "rgba(255,93,87,1)", scale: 1.025, duration: .7, stagger: .4, yoyo: true, repeat: 1 }, 74.3)
+        .to("#s06 .browser", { y: -12, duration: 7.85, ease: "none" }, 70.25);
+
+      // 07 — economic readout enters like a terminal ledger.
+      tl.from("#s07 .head > *", { opacity: 0, x: -45, duration: .8, stagger: .13, immediateRender: false }, 82.65)
+        .from("#s07 .econ-row", { opacity: 0, x: 70, duration: .8, stagger: .42, immediateRender: false }, 83.25)
+        .from("#s07 .econ-num", { opacity: 0, scale: .72, duration: .62, stagger: .42, immediateRender: false }, 83.55)
+        .to("#s07 .clock-rings", { rotation: 90, duration: 13, ease: "none" }, 82.2)
+        .to("#s07 .econ-row:nth-child(3)", { backgroundColor: "rgba(255,178,91,.08)", duration: 1.1 }, 87.5);
+
+      // 08 — lock presents as intact, then a red cut passes through it.
+      tl.from("#s08 .question", { opacity: 0, y: 20, duration: .7, immediateRender: false }, 96.65)
+        .from("#s08 h2", { opacity: 0, x: -55, duration: 1.05, immediateRender: false }, 97)
+        .from("#s08 .answer", { opacity: 0, y: 35, duration: .8, immediateRender: false }, 98.1)
+        .from("#s08 .lock", { opacity: 0, scale: .7, duration: 1.25, immediateRender: false }, 96.7)
+        .from("#s08 .lock-cut", { scaleX: 0, duration: .9, ease: "expo.inOut", immediateRender: false }, 101.1)
+        .to("#s08 .lock-loop", { y: -40, rotation: -9, opacity: .32, duration: .8 }, 101.65)
+        .to("#s08 .lock", { x: 30, duration: .14, repeat: 5, yoyo: true, ease: "none" }, 101.3);
+
+      // 09 — each condition climbs higher.
+      tl.from("#s09 .head > *", { opacity: 0, y: 32, duration: .8, stagger: .14, immediateRender: false }, 109.65)
+        .from("#s09 .step", { scaleY: 0, duration: .9, stagger: .42, ease: "expo.out", immediateRender: false }, 110.55)
+        .from("#s09 .step .pct", { opacity: 0, scale: .65, duration: .6, stagger: .42, immediateRender: false }, 110.85)
+        .from("#s09 .step .method", { opacity: 0, y: 22, duration: .55, stagger: .42, immediateRender: false }, 111.15)
+        .to("#s09 .step:last-child", { backgroundColor: "rgba(255,93,87,.34)", duration: 1.1, repeat: 2, yoyo: true }, 114.8);
+
+      // 10 — refusal shell opens along a precise fracture.
+      tl.from("#s10 .copy > *", { opacity: 0, x: -45, duration: .85, stagger: .14, immediateRender: false }, 124.65)
+        .from("#s10 .model-core", { opacity: 0, scale: .74, duration: 1.25, immediateRender: false }, 124.4)
+        .to("#s10 .shell", { rotation: 120, duration: 12, ease: "none" }, 125)
+        .from("#s10 .slice", { scaleX: 0, duration: 1.05, ease: "expo.inOut", immediateRender: false }, 127.2)
+        .from("#s10 .slice-label", { opacity: 0, x: 35, duration: .65, immediateRender: false }, 127.8)
+        .from("#s10 .refusal", { opacity: 0, y: 25, duration: .8, immediateRender: false }, 128.3)
+        .to("#s10 .shell", { scaleY: .86, opacity: .38, duration: 1.1 }, 128.1);
+
+      // 11 — one capability rotates between both sides.
+      tl.from("#s11 .half", { opacity: 0, x: function(i){ return i ? 70 : -70; }, duration: 1.05, stagger: .18, immediateRender: false }, 138.55)
+        .from("#s11 .half h2", { opacity: 0, y: 38, duration: .85, stagger: .2, immediateRender: false }, 139.15)
+        .from("#s11 .dual-orbit", { opacity: 0, scale: .5, duration: 1.15, immediateRender: false }, 139.2)
+        .to("#s11 .dual-orbit", { rotation: 360, duration: 11.5, ease: "none" }, 139.7)
+        .to("#s11 .orbit-dot", { scale: 1.7, duration: .8, repeat: 5, yoyo: true, ease: "sine.inOut" }, 140.2);
+
+      // 12 — response framework, one concrete action at a time.
+      tl.from("#s12 .head > *", { opacity: 0, y: 28, duration: .8, stagger: .13, immediateRender: false }, 151.6)
+        .from("#s12 .formula span", { opacity: 0, scale: .75, duration: .75, stagger: .18, immediateRender: false }, 152.5)
+        .from("#s12 .action", { opacity: 0, y: 65, duration: .85, stagger: .34, immediateRender: false }, 153.4)
+        .from("#s12 .action > *", { opacity: 0, y: 18, duration: .55, stagger: .08, immediateRender: false }, 154.05)
+        .to("#s12 .grid", { x: 84, y: 42, duration: 13.5, ease: "none" }, 151.1);
+
+      // 13 — global network resolves into the final proposition.
+      tl.from("#s13 .global-net", { opacity: 0, scale: 1.18, duration: 2.2, immediateRender: false }, 165.1)
+        .from("#s13 .global-net path", { strokeDashoffset: 240, duration: 8, ease: "none", stagger: .2, immediateRender: false }, 165.3)
+        .from("#s13 .global-net circle", { opacity: 0, scale: 0, duration: .55, stagger: .16, immediateRender: false }, 166.1)
+        .from("#s13 .eyebrow", { opacity: 0, y: 18, duration: .7, immediateRender: false }, 166.2)
+        .from("#s13 h2", { opacity: 0, y: 70, scale: .96, duration: 1.2, immediateRender: false }, 166.75)
+        .from("#s13 .question", { opacity: 0, y: 25, duration: .9, immediateRender: false }, 168.25)
+        .to("#s13 .final-rule", { width: 540, duration: 1.3, ease: "expo.out" }, 169)
+        .to("#s13 .global-net", { scale: .92, duration: 11.6, ease: "none" }, 167.35);
+
+      // Shared editorial camera drift and subtle technical texture.
+      for (var s = 1; s <= 13; s++) {
+        var sid = "#s" + (s < 10 ? "0" + s : s);
+        var starts = [0,13,26,40,55,68,82,96,109,124,138,151,165];
+        var durs = [14,14,15,16,14,15,15,14,16,15,14,15,15];
+        tl.fromTo(sid + " .bg", { scale: 1.03 }, { scale: 1.1, duration: durs[s-1], ease: "none", immediateRender: false }, starts[s-1]);
+        tl.from(sid + " .chrome > *", { opacity: 0, duration: .6, stagger: .06, immediateRender: false }, starts[s-1] + .45);
+      }
+
+      window.__timelines["the-threshold-moved"] = tl;
+    })();
+  </script>
+</body>
+</html>
