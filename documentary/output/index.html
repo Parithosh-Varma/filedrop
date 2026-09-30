@@ -10,32 +10,112 @@
     body { display: grid; place-items: center; padding: 28px; font-family: ui-sans-serif, system-ui, sans-serif; }
     main { width: min(1240px, 100%); }
     header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
-    p { margin: 0; color: #8fa3a2; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+    .kicker { margin: 0; color: #8fa3a2; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
     h1 { margin: 6px 0 0; font-size: clamp(30px, 5vw, 58px); letter-spacing: -.05em; }
     .meta { white-space: nowrap; color: #72f0d4; font: 12px ui-monospace, monospace; }
     .player { overflow: hidden; border: 1px solid #243538; background: #000; box-shadow: 0 30px 100px rgba(0,0,0,.55); }
     video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+    video::cue { color: #fff; background: rgba(3,5,7,.88); font: 600 22px/1.35 ui-sans-serif, system-ui, sans-serif; }
     footer { display: flex; justify-content: space-between; gap: 24px; margin-top: 14px; color: #6f8484; font: 12px/1.5 ui-monospace, monospace; }
     a { color: #72f0d4; }
-    @media (max-width: 640px) { body { padding: 14px; } header, footer { align-items: start; flex-direction: column; } }
+    .downloads { display: flex; gap: 16px; flex-wrap: wrap; }
+    details { margin-top: 34px; border-top: 1px solid #203033; padding-top: 22px; }
+    summary { cursor: pointer; color: #eef5f2; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+    .transcript-intro { margin: 10px 0 18px; color: #809493; font-size: 14px; line-height: 1.6; }
+    #transcript { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: #172427; border: 1px solid #172427; }
+    .cue { display: grid; grid-template-columns: 58px 1fr; gap: 16px; width: 100%; min-height: 78px; padding: 16px; border: 0; text-align: left; color: #cad5d3; background: #071013; cursor: pointer; font: 15px/1.45 ui-sans-serif, system-ui, sans-serif; }
+    .cue:hover, .cue.active { background: #0c1c1d; color: #fff; }
+    .cue.active { box-shadow: inset 3px 0 #72f0d4; }
+    .cue time { color: #72f0d4; font: 12px/1.6 ui-monospace, monospace; }
+    .cue span { white-space: pre-line; }
+    .loading { padding: 18px; color: #809493; background: #071013; }
+    @media (max-width: 720px) {
+      body { padding: 14px; }
+      header, footer { align-items: start; flex-direction: column; }
+      #transcript { grid-template-columns: 1fr; }
+      video::cue { font-size: 16px; }
+    }
   </style>
 </head>
 <body>
   <main>
     <header>
-      <div><p>A HyperFrames documentary</p><h1>The Threshold Moved</h1></div>
+      <div><p class="kicker">A HyperFrames documentary</p><h1>The Threshold Moved</h1></div>
       <div class="meta">03:00 · 1080p · 24 FPS</div>
     </header>
     <div class="player">
-      <video controls preload="metadata" poster="poster.jpg">
+      <video id="film" controls preload="metadata" poster="poster.jpg">
         <source src="the-threshold-moved.mp4" type="video/mp4" />
+        <track id="english-track" kind="subtitles" src="transcript.vtt" srclang="en" label="English" default />
         Your browser does not support embedded MP4 video.
       </video>
     </div>
     <footer>
-      <span>Use the player controls to start playback and enable fullscreen.</span>
-      <a href="the-threshold-moved.mp4" download>Download MP4</a>
+      <span>English captions are enabled. Use CC in the player to toggle them.</span>
+      <span class="downloads">
+        <a href="the-threshold-moved.mp4" download>Download MP4</a>
+        <a href="transcript.vtt" download>WebVTT</a>
+        <a href="transcript.srt" download>SRT</a>
+      </span>
     </footer>
+
+    <details open>
+      <summary>Timecoded transcript</summary>
+      <p class="transcript-intro">Verbatim English narration. Select any passage to jump to that moment in the film.</p>
+      <div id="transcript" aria-live="polite"><div class="loading">Loading transcript…</div></div>
+    </details>
   </main>
+  <script>
+    (function () {
+      var video = document.getElementById("film");
+      var trackEl = document.getElementById("english-track");
+      var transcript = document.getElementById("transcript");
+
+      function clock(seconds) {
+        var total = Math.max(0, Math.floor(seconds));
+        return String(Math.floor(total / 60)).padStart(2, "0") + ":" + String(total % 60).padStart(2, "0");
+      }
+
+      function buildTranscript() {
+        var cues = trackEl.track && trackEl.track.cues;
+        if (!cues || !cues.length) return;
+        transcript.innerHTML = "";
+        Array.prototype.forEach.call(cues, function (cue) {
+          var button = document.createElement("button");
+          button.className = "cue";
+          button.type = "button";
+          button.dataset.start = String(cue.startTime);
+          var time = document.createElement("time");
+          time.textContent = clock(cue.startTime);
+          var copy = document.createElement("span");
+          copy.textContent = cue.text;
+          button.appendChild(time);
+          button.appendChild(copy);
+          button.addEventListener("click", function () {
+            video.currentTime = cue.startTime;
+            video.play().catch(function () {});
+          });
+          transcript.appendChild(button);
+        });
+      }
+
+      function highlightCue() {
+        var active = trackEl.track && trackEl.track.activeCues && trackEl.track.activeCues[0];
+        Array.prototype.forEach.call(transcript.querySelectorAll(".cue"), function (button) {
+          var isActive = active && Math.abs(Number(button.dataset.start) - active.startTime) < 0.01;
+          button.classList.toggle("active", Boolean(isActive));
+          if (isActive) button.setAttribute("aria-current", "true");
+          else button.removeAttribute("aria-current");
+        });
+      }
+
+      trackEl.addEventListener("load", function () {
+        trackEl.track.mode = "showing";
+        buildTranscript();
+        trackEl.track.addEventListener("cuechange", highlightCue);
+      });
+      if (trackEl.readyState === 2) buildTranscript();
+    })();
+  </script>
 </body>
 </html>

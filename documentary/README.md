@@ -51,8 +51,12 @@ npx hyperframes render . \
 - `assets/fonts/` — local Space Grotesk and Space Mono webfonts
 - `assets/narration-final.m4a` — narrated voice track
 - `assets/score.m4a` — original atmospheric score
-- `SCRIPT.md` — timed editorial structure and narration transcript
+- `SCRIPT.md` — timed editorial structure and narration script
+- `TRANSCRIPT.md` — complete, timecoded verbatim transcript
 - `SOURCES.md` — research attribution and fact ledger
+- `output/transcript.vtt` — browser-ready English subtitle track
+- `output/transcript.srt` — downloadable SubRip subtitles
+- `output/index.html` — video player with captions and a clickable transcript
 - `output/the-threshold-moved.mp4` — final rendered documentary
 
 ## Creative direction

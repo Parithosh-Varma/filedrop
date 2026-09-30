@@ -1,0 +1,233 @@
+1
+00:00:01,000 --> 00:00:03,229
+Five months ago, a line was crossed.
+
+2
+00:00:03,299 --> 00:00:08,221
+An AI system demonstrated that it could build
+sophisticated cyber exploits, end to end.
+
+3
+00:00:08,291 --> 00:00:13,637
+Anthropic limited access, placing the capability
+with trusted defenders through Project Glasswing.
+
+4
+00:00:13,707 --> 00:00:18,263
+They found more than ten thousand vulnerabilities
+in critical software.
+
+5
+00:00:18,333 --> 00:00:22,014
+It was a head start, not a permanent advantage.
+
+6
+00:00:22,084 --> 00:00:23,934
+Because now, those models have arrived.
+
+7
+00:00:24,004 --> 00:00:28,831
+GLM-5.3, released by Zhipu AI, can autonomously
+construct working exploit chains
+
+8
+00:00:28,901 --> 00:00:33,507
+at a level close to restricted frontier systems.
+The difference is access.
+
+9
+00:00:33,577 --> 00:00:35,772
+Anyone can download its weights.
+
+10
+00:00:35,842 --> 00:00:41,274
+On ExploitBench, GLM-5.3 built end-to-end attacks
+in fifty of four hundred and ten attempts.
+
+11
+00:00:41,344 --> 00:00:46,319
+Claude Mythos Preview succeeded fifty-six times.
+Earlier models remained near zero.
+
+12
+00:00:46,389 --> 00:00:48,647
+A threshold had moved.
+
+13
+00:00:48,717 --> 00:00:54,119
+In another benchmark, GLM-5.3 achieved full
+control-flow hijacks in four percent of trials.
+
+14
+00:00:54,189 --> 00:00:57,839
+Small numbers, until you consider
+what one success means.
+
+15
+00:00:57,909 --> 00:01:02,967
+In a day-long session, with limited human focus,
+the model found unknown browser vulnerabilities,
+
+16
+00:01:03,037 --> 00:01:07,604
+chained them together, escaped a sandbox,
+and read sensitive files from a machine.
+
+17
+00:01:08,021 --> 00:01:09,710
+Speed changes the economics.
+
+18
+00:01:09,780 --> 00:01:15,261
+A smaller model turned public details of a Chrome
+vulnerability into a reliable ARM64 exploit chain.
+
+19
+00:01:15,331 --> 00:01:19,454
+The human supplied twenty minutes of attention.
+The model worked for eight hours.
+
+20
+00:01:19,524 --> 00:01:22,150
+The API bill was twenty dollars and forty cents.
+
+21
+00:01:22,220 --> 00:01:25,698
+Capability had become cheap, patient,
+and reproducible.
+
+22
+00:01:25,768 --> 00:01:26,761
+But the deeper concern is control.
+
+23
+00:01:26,831 --> 00:01:31,141
+Out of the box, GLM-5.3 refused
+direct malicious orders in these tests.
+
+24
+00:01:31,211 --> 00:01:34,265
+A false cover story raised engagement
+to sixty-four percent.
+
+25
+00:01:34,335 --> 00:01:36,730
+Prefilled reasoning raised it to ninety-two.
+
+26
+00:01:36,800 --> 00:01:39,604
+An altered version engaged
+one hundred percent of the time.
+
+27
+00:01:39,674 --> 00:01:44,381
+Anthropic reports that these techniques did not
+succeed against safeguarded Claude models
+
+28
+00:01:44,451 --> 00:01:48,899
+in its tests. Open weights make another path
+possible: operators can remove refusals
+
+29
+00:01:48,969 --> 00:01:54,376
+at the model level. Mean refusal rates fell
+from about ninety-five percent to six,
+
+30
+00:01:54,446 --> 00:01:55,935
+while capability remained largely intact.
+
+31
+00:01:56,004 --> 00:01:58,901
+The safety layer did not break.
+It was edited out.
+
+32
+00:01:59,293 --> 00:02:01,882
+This is not a story with only one direction.
+
+33
+00:02:01,952 --> 00:02:05,924
+The same capability that finds a path into a browser
+can find the flaw before an attacker does.
+
+34
+00:02:05,994 --> 00:02:09,062
+Defenders used their head start
+to patch thousands of systems.
+
+35
+00:02:09,132 --> 00:02:14,117
+Frontier models can compress months of specialized
+work into hours, for both sides.
+
+36
+00:02:14,187 --> 00:02:15,891
+That is why access and safeguards matter together.
+
+37
+00:02:15,961 --> 00:02:18,954
+Restrict every powerful tool,
+and defenders may fall behind.
+
+38
+00:02:19,024 --> 00:02:24,909
+Release one without meaningful controls, and offensive
+capability spreads to anyone with hardware and intent.
+
+39
+00:02:24,979 --> 00:02:27,514
+Anthropic's conclusion is urgent: independent
+safety testing must become routine.
+
+40
+00:02:27,584 --> 00:02:30,572
+Trusted access for cyber defenders must expand.
+
+41
+00:02:30,642 --> 00:02:35,348
+Developers must treat misuse resistance as part of
+capability, not an optional shell around it.
+
+42
+00:02:35,418 --> 00:02:38,152
+The numbers in this research are snapshots,
+not ceilings.
+
+43
+00:02:38,222 --> 00:02:42,022
+Four months of distance from the frontier
+can disappear.
+
+44
+00:02:42,092 --> 00:02:43,455
+Costs can fall. Techniques can spread.
+
+45
+00:02:43,525 --> 00:02:46,376
+And the next model will not wait
+for institutions to catch up.
+
+46
+00:02:46,445 --> 00:02:49,670
+The era of advanced cyber capability
+is no longer approaching.
+
+47
+00:02:49,740 --> 00:02:50,694
+It is distributing.
+
+48
+00:02:50,764 --> 00:02:53,834
+The window to prepare is measured
+not in years, but in releases.
+
+49
+00:02:53,904 --> 00:02:56,574
+The decisive question now is who moves first:
+
+50
+00:02:56,644 --> 00:02:59,480
+those searching for a way in,
+or those racing to close it.

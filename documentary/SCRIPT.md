@@ -24,6 +24,8 @@
 
 ## Narration
 
+For composition-relative cue timings and downloadable subtitle formats, see `TRANSCRIPT.md`, `output/transcript.vtt`, and `output/transcript.srt`.
+
 Five months ago, a line was crossed. An AI system demonstrated that it could build sophisticated cyber exploits, end to end. Anthropic limited access, placing the capability with trusted defenders through Project Glasswing. They found more than ten thousand vulnerabilities in critical software. It was a head start, not a permanent advantage.
 
 Because now, those models have arrived. GLM-5.3, released by Zhipu AI, can autonomously construct working exploit chains at a level close to restricted frontier systems. The difference is access. Anyone can download its weights.
