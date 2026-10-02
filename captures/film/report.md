@@ -1,0 +1,673 @@
+# film capture
+
+{"A":{"email":"mmfilm.muqyr7a0.a@gmail.com","pass":"Capture@2021x","name":"Ananya"},"B":{"email":"mmfilm.muqyr7a0.b@gmail.com","pass":"Capture@2021x","name":"Rohit"}}
+
+```
+TEAM_CODE Q9Y-VVR CLIENT Mr & Mrs Fernandes BUDGET ₹1,00,000
+B joined? NSE CLOSE · 30 JUN 2021  HDFCBANK 700.87 ▼ 0.76% KOTAKBANK 339.75 ▼ 5.64% AXISBANK 745.19 ▼ 0.32% BAJAJFINSV 1,208.19 ▲ 2.56% BAJFINANCE 589.29 ▲ 6.89% SUNDARMFIN 2,567.59 ▲ 7.00% AAVAS 2,712.40 ▲ 17.79% CYIENT 777.80 ▲ 6.57% MPHASIS 1,911.09 ▲ 9.76% HCLTECH 802.83 ▲ 4.05% TECHM 919.46 ▲ 7.22% ZENSA
+still land-hero
+still land-chart
+still land-rule
+still land-round
+still land-clients
+still land-clients2
+still land-scoring
+still land-stats
+still land-cta
+landing height 6262
+still team
+still screener-top
+still screener-tiles
+still screener-tiles2
+still screener-table
+still screener-table2
+still screener-small
+still co-TATAMOTORS-head
+sections TATAMOTORS {"price":926,"profit-&-loss":1581,"cash-from-operatio":1961,"at-a-glance":929}
+still co-TATAMOTORS-price
+still co-TATAMOTORS-profit-&-loss
+still co-TATAMOTORS-cash-from-operatio
+still co-TATAMOTORS-at-a-glance
+still co-INFY-head
+sections INFY {"price":894,"profit-&-loss":1532,"cash-from-operatio":1911,"at-a-glance":894}
+still co-INFY-price
+still co-INFY-profit-&-loss
+still co-INFY-cash-from-operatio
+still co-INFY-at-a-glance
+still co-BAJFINANCE-head
+sections BAJFINANCE {"price":879,"profit-&-loss":1517,"cash-from-operatio":1896,"at-a-glance":879}
+still co-BAJFINANCE-price
+still co-BAJFINANCE-profit-&-loss
+still co-BAJFINANCE-cash-from-operatio
+still co-BAJFINANCE-at-a-glance
+still co-AAVAS-head
+sections AAVAS {"price":879,"profit-&-loss":1517,"cash-from-operatio":1896,"at-a-glance":879}
+still co-AAVAS-price
+still co-AAVAS-profit-&-loss
+still co-AAVAS-cash-from-operatio
+still co-AAVAS-at-a-glance
+still co-ZENSARTECH-head
+sections ZENSARTECH {"price":862,"profit-&-loss":1500,"cash-from-operatio":1879,"at-a-glance":862}
+still co-ZENSARTECH-price
+still co-ZENSARTECH-profit-&-loss
+still co-ZENSARTECH-cash-from-operatio
+still co-ZENSARTECH-at-a-glance
+still terminal-globe
+still terminal-timeline
+still terminal-wire
+still orders-empty
+clip saved ticker
+clip saved landing-scroll
+clip saved screener-work
+clip saved research-TATAMOTORS
+clip saved research-INFY
+clip saved draw
+clip saved terminal
+buy buttons 100
+clip saved orders-build
+clip saved team-live
+still orders-filled
+still orders-filled-mid
+SLIP TEXT NSE CLOSE · 30 JUN 2021
+HDFCBANK
+700.87
+▼ 0.76%
+KOTAKBANK
+339.75
+▼ 5.64%
+AXISBANK
+745.19
+▼ 0.32%
+BAJAJFINSV
+1,208.19
+▲ 2.56%
+BAJFINANCE
+589.29
+▲ 6.89%
+SUNDARMFIN
+2,567.59
+▲ 7.00%
+AAVAS
+2,712.40
+▲ 17.79%
+CYIENT
+777.80
+▲ 6.57%
+MPHASIS
+1,911.09
+▲ 9.76%
+HCLTECH
+802.83
+▲ 4.05%
+TECHM
+919.46
+▲ 7.22%
+ZENSARTECH
+290.99
+▲ 8.94%
+COFORGE
+783.58
+▲ 18.25%
+INFY
+1,376.83
+▲ 14.64%
+WIPRO
+252.06
+▲ 1.22%
+BIOCON
+400.37
+▲ 4.18%
+DRREDDY
+1,051.05
+▲ 2.15%
+CIPLA
+927.43
+▲ 2.38%
+DIVISLAB
+4,276.17
+▲ 5.11%
+GODREJCP
+831.23
+▲ 1.60%
+COLPAL
+1,503.35
+▼ 2.01%
+JYOTHYLAB
+144.08
+▼ 0.16%
+BRITANNIA
+3,436.93
+▲ 6.25%
+TATACONSUM
+723.80
+▲ 14.29%
+MARICO
+499.68
+▲ 11.70%
+NESTLEIND
+838.10
+▼ 0.35%
+ITC
+159.60
+▼ 3.72%
+VBL
+95.86
+▲ 8.19%
+TATAMOTORS
+330.85
+▲ 6.54%
+HAVELLS
+949.03
+▼ 4.58%
+VOLTAS
+993.99
+▲ 1.50%
+ASTRAL
+1,478.37
+▲ 6.10%
+KAJARIACER
+941.81
+▲ 1.47%
+AMBUJACEM
+327.80
+▲ 4.24%
+CERA
+4,335.24
+▲ 13.54%
+SUPREMEIND
+2,083.47
+▼ 3.86%
+GRINDWELL
+1,197.42
+▲ 1.78%
+RELIANCE
+955.95
+▼ 1.96%
+BPCL
+166.56
+▼ 0.82%
+ADANIGREEN
+1,124.90
+▼ 11.30%
+RPOWER
+15.00
+▲ 73.41%
+GUJGASLTD
+632.85
+▲ 23.21%
+IGL
+250.41
+▲ 5.47%
+AARTIIND
+859.12
+▲ 3.94%
+GARFIBRES
+665.09
+▲ 17.87%
+RAJESHEXPO
+562.90
+▲ 9.03%
+RELAXO
+1,132.18
+▲ 1.45%
+ZEEL
+203.44
+▲ 2.58%
+JPASSOCIAT
+12.55
+▲ 41.81%
+BALKRISIND
+2,148.35
+▲ 1.96%
+BOSCHLTD
+13,894.84
+▼ 1.52%
+GABRIEL
+114.64
+▲ 1.14%
+JAMNAAUTO
+77.75
+▲ 1.45%
+LUMAXIND
+1,434.53
+▼ 5.55%
+MINDACORP
+125.81
+▲ 2.07%
+SUPRAJIT
+273.68
+▲ 5.63%
+DCBBANK
+98.40
+▼ 1.38%
+FEDERALBNK
+83.26
+▼ 0.17%
+KARURVYSYA
+39.42
+▼ 9.63%
+CCL
+347.12
+▲ 2.02%
+KEI
+688.41
+▲ 12.52%
+POLYCAB
+1,911.94
+▲ 17.97%
+IFBIND
+1,022.00
+▼ 3.07%
+AMBER
+2,926.20
+▲ 7.28%
+DIXON
+4,411.44
+▲ 9.74%
+KIRLOSENG
+222.47
+▲ 2.65%
+THERMAX
+1,449.53
+▲ 4.25%
+ZENTEC
+90.55
+▲ 26.52%
+BAJAJCON
+262.51
+▲ 0.31%
+HERITGFOOD
+207.85
+▲ 27.06%
+DEEPAKFERT
+371.23
+▲ 33.25%
+INDHOTEL
+135.14
+▲ 1.84%
+JUBLFOOD
+608.16
+▼ 1.00%
+KPITTECH
+252.8
+still team-two
+clip saved reveal
+post-reveal url https://nse-time-capsule.vercel.app/game/orders
+still result-top
+RESULT TEXT NSE CLOSE · 30 JUN 2021
+
+HDFCBANK
+700.87
+▼ 0.76%
+KOTAKBANK
+339.75
+▼ 5.64%
+AXISBANK
+745.19
+▼ 0.32%
+BAJAJFINSV
+1,208.19
+▲ 2.56%
+BAJFINANCE
+589.29
+▲ 6.89%
+SUNDARMFIN
+2,567.59
+▲ 7.00%
+AAVAS
+2,712.40
+▲ 17.79%
+CYIENT
+777.80
+▲ 6.57%
+MPHASIS
+1,911.09
+▲ 9.76%
+HCLTECH
+802.83
+▲ 4.05%
+TECHM
+919.46
+▲ 7.22%
+ZENSARTECH
+290.99
+▲ 8.94%
+COFORGE
+783.58
+▲ 18.25%
+INFY
+1,376.83
+▲ 14.64%
+WIPRO
+252.06
+▲ 1.22%
+BIOCON
+400.37
+▲ 4.18%
+DRREDDY
+1,051.05
+▲ 2.15%
+CIPLA
+927.43
+▲ 2.38%
+DIVISLAB
+4,276.17
+▲ 5.11%
+GODREJCP
+831.23
+▲ 1.60%
+COLPAL
+1,503.35
+▼ 2.01%
+JYOTHYLAB
+144.08
+▼ 0.16%
+BRITANNIA
+3,436.93
+▲ 6.25%
+TATACONSUM
+723.80
+▲ 14.29%
+MARICO
+499.68
+▲ 11.70%
+NESTLEIND
+838.10
+▼ 0.35%
+ITC
+159.60
+▼ 3.72%
+VBL
+95.86
+▲ 8.19%
+TATAMOTORS
+330.85
+▲ 6.54%
+HAVELLS
+949.03
+▼ 4.58%
+VOLTAS
+993.99
+▲ 1.50%
+ASTRAL
+1,478.37
+▲ 6.10%
+KAJARIACER
+941.81
+▲ 1.47%
+AMBUJACEM
+327.80
+▲ 4.24%
+CERA
+4,335.24
+▲ 13.54%
+SUPREMEIND
+2,083.47
+▼ 3.86%
+GRINDWELL
+1,197.42
+▲ 1.78%
+RELIANCE
+955.95
+▼ 1.96%
+BPCL
+166.56
+▼ 0.82%
+ADANIGREEN
+1,124.90
+▼ 11.30%
+RPOWER
+15.00
+▲ 73.41%
+GUJGASLTD
+632.85
+▲ 23.21%
+IGL
+250.41
+▲ 5.47%
+AARTIIND
+859.12
+▲ 3.94%
+GARFIBRES
+665.09
+▲ 17.87%
+RAJESHEXPO
+562.90
+▲ 9.03%
+RELAXO
+1,132.18
+▲ 1.45%
+ZEEL
+203.44
+▲ 2.58%
+JPASSOCIAT
+12.55
+▲ 41.81%
+BALKRISIND
+2,148.35
+▲ 1.96%
+BOSCHLTD
+13,894.84
+▼ 1.52%
+GABRIEL
+114.64
+▲ 1.14%
+JAMNAAUTO
+77.75
+▲ 1.45%
+LUMAXIND
+1,434.53
+▼ 5.55%
+MINDACORP
+125.81
+▲ 2.07%
+SUPRAJIT
+273.68
+▲ 5.63%
+DCBBANK
+98.40
+▼ 1.38%
+FEDERALBNK
+83.26
+▼ 0.17%
+KARURVYSYA
+39.42
+▼ 9.63%
+CCL
+347.12
+▲ 2.02%
+KEI
+688.41
+▲ 12.52%
+POLYCAB
+1,911.94
+▲ 17.97%
+IFBIND
+1,022.00
+▼ 3.07%
+AMBER
+2,926.20
+▲ 7.28%
+DIXON
+4,411.44
+▲ 9.74%
+KIRLOSENG
+222.47
+▲ 2.65%
+THERMAX
+1,449.53
+▲ 4.25%
+ZENTEC
+90.55
+▲ 26.52%
+BAJAJCON
+262.51
+▲ 0.31%
+HERITGFOOD
+207.85
+▲ 27.06%
+DEEPAKFERT
+371.23
+▲ 33.25%
+INDHOTEL
+135.14
+▲ 1.84%
+JUBLFOOD
+608.16
+▼ 1.00%
+KPITTECH
+252.86
+▲ 6.74%
+LTTS
+2,721.67
+▲ 7.09%
+NEWGEN
+304.75
+▲ 54.55%
+PERSISTENT
+1,411.87
+▲ 15.57%
+TANLA
+744.78
+▼ 12.83%
+TATAELXSI
+4,087.78
+▲ 19.66%
+GREENPANEL
+229.71
+▼ 8.86%
+NILKAMAL
+2,101.53
+▼ 0.04%
+SANDESH
+788.10
+▲ 1.33%
+GRAVITA
+125.24
+▲ 23.06%
+CHOLAFIN
+507.76
+▼ 6.56%
+MANAPPURAM
+153.00
+▲ 4.06%
+MUTHOOTFIN
+1,379.30
+▲ 12.96%
+REPCOHOME
+351.14
+▲ 5.66%
+AJANTPHARM
+1,341.67
+▲ 11.87%
+ALKEM
+3,035.27
+▲ 7.03%
+LAURUSLABS
+678.28
+▲ 31.48%
+TORNTPHARM
+1,366.43
+▲ 6.40%
+APCOTEXIND
+298.59
+▼ 4.67%
+NAVINFLUOR
+3,687.71
+▲ 16.26%
+NOCIL
+203.28
+▲ 4.82%
+SRF
+1,430.16
+▲ 11.71%
+ARVIND
+73.58
+▼ 2.00%
+HIMATSEIDE
+184.18
+▲ 13.47%
+PAGEIND
+27,813.20
+▼ 3.73%
+RAYMOND
+408.34
+▲ 11.85%
+HDFCBANK
+700.87
+▼ 0.76%
+KOTAKBANK
+339.75
+▼ 5.64%
+AXISBANK
+745.19
+▼ 0.32%
+BAJAJFINSV
+1,208.19
+▲ 2.56%
+BAJFINANCE
+589.29
+▲ 6.89%
+SUNDARMFIN
+2,567.59
+▲ 7.00%
+AAVAS
+2,712.40
+▲ 17.79%
+CYIENT
+777.80
+▲ 6.57%
+MPHASIS
+1,911.09
+▲ 9.76%
+HCLTECH
+802.83
+▲ 4.05%
+TECHM
+919.46
+▲ 7.22%
+ZENSARTECH
+290.99
+▲ 8.94%
+COFORGE
+783.58
+▲ 18.25%
+INFY
+1,376.83
+▲ 14.64%
+WIPRO
+252.06
+▲ 1.22%
+BIOCON
+400.37
+▲ 4.18%
+DRREDDY
+1,051.05
+▲ 2.15%
+CIPLA
+927.43
+▲ 2.38%
+DIVISLAB
+4,276.17
+▲ 5.11%
+GODREJCP
+831.23
+▲ 1.60%
+COLPAL
+1,503.35
+▼ 2.01%
+JYOTHYLAB
+144.08
+▼ 0.16%
+BRITANNIA
+3,436.93
+▲ 6.25%
+T
+result height 1978
+still result-700
+still result-1400
+route /game/reveal 404
+route /game/results 404
+route /game/scorecard 404
+DONE
+```

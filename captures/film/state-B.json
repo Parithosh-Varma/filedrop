@@ -1,0 +1,65 @@
+{
+  "cookies": [
+    {
+      "name": "mm_remember",
+      "value": "1",
+      "domain": "nse-time-capsule.vercel.app",
+      "path": "/",
+      "expires": 1825505614.985479,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sb-hsilftmdeegzshsspdce-auth-token-flow-bb32d631c8f114463732c94c8068a140-code-verifier",
+      "value": "base64-IjJiMzI2YTFkZjhkZDZkYzc1MTY2NTYyYTQ2ZGZhZjZmMTE5M2E0ZTIyZjNlMGJkZDhlMTg1Yjg4Nzc5ZTc0NDY4NjQ3OGE2YjhmZjM1NDYzMTFiMjYyMWUwZWQwMWVjNDJjNjAwMjJlMDBhYTM5YjEi",
+      "domain": "nse-time-capsule.vercel.app",
+      "path": "/",
+      "expires": 1825505614.985557,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sb-hsilftmdeegzshsspdce-auth-token-flows-code-verifier",
+      "value": "base64-WyJiYjMyZDYzMWM4ZjExNDQ2MzczMmM5NGM4MDY4YTE0MCJd",
+      "domain": "nse-time-capsule.vercel.app",
+      "path": "/",
+      "expires": 1825505614.985583,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sb-hsilftmdeegzshsspdce-auth-token-code-verifier",
+      "value": "base64-IjJiMzI2YTFkZjhkZDZkYzc1MTY2NTYyYTQ2ZGZhZjZmMTE5M2E0ZTIyZjNlMGJkZDhlMTg1Yjg4Nzc5ZTc0NDY4NjQ3OGE2YjhmZjM1NDYzMTFiMjYyMWUwZWQwMWVjNDJjNjAwMjJlMDBhYTM5YjEi",
+      "domain": "nse-time-capsule.vercel.app",
+      "path": "/",
+      "expires": 1825505614.985605,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sb-hsilftmdeegzshsspdce-auth-token",
+      "value": "base64-eyJhY2Nlc3NfdG9rZW4iOiJleUpoYkdjaU9pSkZVekkxTmlJc0ltdHBaQ0k2SWpFNE5qSTBNekF5TFdNeE5EUXRORE5rT0MxaU5XVmpMVEF3TmpObVpHUXdOakZpTVNJc0luUjVjQ0k2SWtwWFZDSjkuZXlKcGMzTWlPaUpvZEhSd2N6b3ZMMmh6YVd4bWRHMWtaV1ZuZW5Ob2MzTndaR05sTG5OMWNHRmlZWE5sTG1OdkwyRjFkR2d2ZGpFaUxDSnpkV0lpT2lKbVlXWmtaRGt3WXkxbFpqVXpMVFEzWWpNdE9HSXlOUzB4WW1Gall6STVNMlU0TXpBaUxDSmhkV1FpT2lKaGRYUm9aVzUwYVdOaGRHVmtJaXdpWlhod0lqb3hOemt3T1RRNU1qRTBMQ0pwWVhRaU9qRTNPVEE1TkRVMk1UUXNJbVZ0WVdsc0lqb2liVzFtYVd4dExtMTFjWGx5TjJFd0xtSkFaMjFoYVd3dVkyOXRJaXdpY0dodmJtVWlPaUlpTENKaGNIQmZiV1YwWVdSaGRHRWlPbnNpY0hKdmRtbGtaWElpT2lKbGJXRnBiQ0lzSW5CeWIzWnBaR1Z5Y3lJNld5SmxiV0ZwYkNKZGZTd2lkWE5sY2w5dFpYUmhaR0YwWVNJNmV5SmthWE53YkdGNVgyNWhiV1VpT2lKU2IyaHBkQ0lzSW1WdFlXbHNJam9pYlcxbWFXeHRMbTExY1hseU4yRXdMbUpBWjIxaGFXd3VZMjl0SWl3aVpXMWhhV3hmZG1WeWFXWnBaV1FpT25SeWRXVXNJbkJvYjI1bFgzWmxjbWxtYVdWa0lqcG1ZV3h6WlN3aWMzVmlJam9pWm1GbVpHUTVNR010WldZMU15MDBOMkl6TFRoaU1qVXRNV0poWTJNeU9UTmxPRE13SW4wc0luSnZiR1VpT2lKaGRYUm9aVzUwYVdOaGRHVmtJaXdpWVdGc0lqb2lZV0ZzTVNJc0ltRnRjaUk2VzNzaWJXVjBhRzlrSWpvaWNHRnpjM2R2Y21RaUxDSjBhVzFsYzNSaGJYQWlPakUzT1RBNU5EVTJNVFI5WFN3aWMyVnpjMmx2Ymw5cFpDSTZJakUyTW1FM05tRmxMV1psTXprdE5EZ3lZeTFoWW1JekxXVmpObUV6WXpsbU5HTmxOaUlzSW1selgyRnViMjU1Ylc5MWN5STZabUZzYzJWOS5hcDhndlhkNVluTWMxc05WSnhNdnByWTVZUncyVVJ3YjZfNVNtYTJkVlhTLUhPLTZZa19LSVlHZ3lxVFZGZmlRYXFURmFpV2JyN0hEMElscHR2ZnU0ZyIsInRva2VuX3R5cGUiOiJiZWFyZXIiLCJleHBpcmVzX2luIjozNjAwLCJleHBpcmVzX2F0IjoxNzkwOTQ5MjE0LCJyZWZyZXNoX3Rva2VuIjoidGk0emlydDNoejN0IiwidXNlciI6eyJpZCI6ImZhZmRkOTBjLWVmNTMtNDdiMy04YjI1LTFiYWNjMjkzZTgzMCIsImF1ZCI6ImF1dGhlbnRpY2F0ZWQiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImVtYWlsIjoibW1maWxtLm11cXlyN2EwLmJAZ21haWwuY29tIiwiZW1haWxfY29uZmlybWVkX2F0IjoiMjAyNi0xMC0wMlQxMjo1MzozNC42Njg1NTQ5NzRaIiwicGhvbmUiOiIiLCJsYXN0X3NpZ25faW5fYXQiOiIyMDI2LTEwLTAyVDEyOjUzOjM0LjY3NTY5MDQ4N1oiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJkaXNwbGF5X25hbWUiOiJSb2hpdCIsImVtYWlsIjoibW1maWxtLm11cXlyN2EwLmJAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiZmFmZGQ5MGMtZWY1My00N2IzLThiMjUtMWJhY2MyOTNlODMwIn0sImlkZW50aXRpZXMiOlt7ImlkZW50aXR5X2lkIjoiYjY0NzE4ZDgtZDE1Ny00NTcwLWJiYzAtNzIyNmNhNzU1N2ZlIiwiaWQiOiJmYWZkZDkwYy1lZjUzLTQ3YjMtOGIyNS0xYmFjYzI5M2U4MzAiLCJ1c2VyX2lkIjoiZmFmZGQ5MGMtZWY1My00N2IzLThiMjUtMWJhY2MyOTNlODMwIiwiaWRlbnRpdHlfZGF0YSI6eyJkaXNwbGF5X25hbWUiOiJSb2hpdCIsImVtYWlsIjoibW1maWxtLm11cXlyN2EwLmJAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiZmFmZGQ5MGMtZWY1My00N2IzLThiMjUtMWJhY2MyOTNlODMwIn0sInByb3ZpZGVyIjoiZW1haWwiLCJsYXN0X3NpZ25faW5fYXQiOiIyMDI2LTEwLTAyVDEyOjUzOjM0LjY2MzExOTM1MloiLCJjcmVhdGVkX2F0IjoiMjAyNi0xMC0wMlQxMjo1MzozNC42NjMxNzdaIiwidXBkYXRlZF9hdCI6IjIwMjYtMTAtMDJUMTI6NTM6MzQuNjYzMTc3WiIsImVtYWlsIjoibW1maWxtLm11cXlyN2EwLmJAZ21haWwuY29tIn1dLCJjcmVhdGVkX2F0IjoiMjAyNi0xMC0wMlQxMjo1MzozNC42NDQ2NDdaIiwidXBkYXRlZF9hdCI6IjIwMjYtMTAtMDJUMTI6NTM6MzQuNjg2MjNaIiwiaXNfYW5vbnltb3VzIjpmYWxzZX19",
+      "domain": "nse-time-capsule.vercel.app",
+      "path": "/",
+      "expires": 1825505614.985623,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://nse-time-capsule.vercel.app",
+      "localStorage": [
+        {
+          "name": "mm-theme",
+          "value": "dark"
+        }
+      ]
+    }
+  ]
+}
