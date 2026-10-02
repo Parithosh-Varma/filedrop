@@ -1,0 +1,1 @@
+{ "name": "marketmind-capture", "private": true, "type": "module", "dependencies": { "playwright": "^1.49.0" } }

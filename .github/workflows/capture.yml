@@ -1,0 +1,33 @@
+name: marketmind-capture
+on:
+  push:
+    branches: [arena/01a0fc90-filedrop]
+    paths: ['capture/**']
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/01a0fc90-filedrop
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install deps
+        working-directory: capture
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run capture script
+        run: node "capture/$(cat capture/ENTRY)"
+      - name: Commit captures
+        run: |
+          git config user.name "marketmind-capture"
+          git config user.email "actions@github.com"
+          git add -A captures || true
+          git commit -m "chore(capture): ui recon output [skip ci]" || echo "nothing to commit"
+          git pull --rebase origin arena/01a0fc90-filedrop || true
+          git push origin HEAD:arena/01a0fc90-filedrop
