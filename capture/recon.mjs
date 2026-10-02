@@ -60,8 +60,10 @@ try {
   await pA.getByRole('button', { name: /draw our client/i }).first().click({ timeout: 8000 }).catch(e => L('draw fail', e.message));
   await pA.waitForTimeout(6000);
   await shot(pA, 'agreement', true);
+  const signer = pA.locator('#signer').first();
+  if (await signer.count()) { await signer.type('Ananya', { delay: 120 }); await pA.waitForTimeout(800); await shot(pA, 'signed-name'); }
   const sign = pA.getByRole('button', { name: /sign the agreement/i }).first();
-  if (await sign.count()) { await sign.click(); await pA.waitForTimeout(4000); await shot(pA, 'after-sign', true); }
+  if (await sign.count()) { await sign.click({ timeout: 15000 }).catch(e => L('sign click fail', e.message)); await pA.waitForTimeout(5000); await shot(pA, 'after-sign', true); }
   await html(pA, 'after-sign');
 
   // team page -> code
