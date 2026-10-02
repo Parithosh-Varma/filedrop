@@ -1,0 +1,842 @@
+# film2
+
+```
+buy count 96
+clip saved orders-fill
+still orders-full-top
+ORDERS TEXT Spend
+₹1,00,000.
+For Mr & Mrs Fernandes (low risk, for life). Buy at the 30 June 2021 close, as many companies as you trust. Your whole team edits this slip together.
+SPENT
+₹8,461.82
+LEFT TO SPEND
+₹91,538.18
+8.5% SPENT · 7 COMPANIES
+NEXT: THE REVEAL
+→
+FIND A COMPANY
+SECTOR
+Every sector
+Banks
+NBFC/Financial Services
+IT Services
+Pharma/Biotech
+FMCG
+Beverages
+Auto
+Consumer Durables
+Industrials/Building Materials
+Auto Components
+Electronics Manufacturing
+Cables & Wires
+Engineering & Capital Goods
+Metals & Recycling
+Energy/Oil & Gas
+Power/Utilities
+Gas Distribution
+Specialty Chemicals
+Textiles
+Jewellery
+Footwear
+Media
+Infra/Cement
+Fertilizers & Agrochem
+Hospitality & QSR
+Fintech
+100/100
+Stock universe. Buy any row to add it to your orders.
+COMPANY	30 JUN 2021	
+Buy
+HDFC Bank
+HDFCBANK · BANKS · LARGE
+	₹700.87	
+HELD
+Kotak Mahindra Bank
+KOTAKBANK · BANKS · LARGE
+	₹339.75	
+HELD
+Axis Bank
+AXISBANK · BANKS · LARGE
+	₹745.19	BUY
+Bajaj Finserv
+BAJAJFINSV · NBFC/FINANCIAL SERVICES · LARGE
+	₹1,208.19	BUY
+Bajaj Finance
+BAJFINANCE · NBFC/FINANCIAL SERVICES · LARGE
+	₹589.29	BUY
+Sundaram Finance
+SUNDARMFIN · NBFC/FINANCIAL SERVICES · LARGE
+	₹2,567.59	
+HELD
+Aavas Financiers
+AAVAS · NBFC/FINANCIAL SERVICES · LARGE
+	₹2,712.40	
+HELD
+Cyient
+CYIENT · IT SERVICES · MID
+	₹777.80	BUY
+Mphasis
+MPHASIS · IT SERVICES · LARGE
+	₹1,911.09	BUY
+HCL Technologies
+HCLTECH · IT SERVICES · LARGE
+	₹802.83	BUY
+Tech Mahindra
+TECHM · IT SERVICES · LARGE
+	₹919.46	BUY
+Zensar Technologies
+ZENSARTECH · IT SERVICES · MID
+	₹290.99	BUY
+Coforge
+COFORGE · IT SERVICES · LARGE
+	₹783.58	BUY
+Infosys
+INFY · IT SERVICES · LARGE
+	₹1,376.83	BUY
+Wipro
+WIPRO · IT SERVICES · LARGE
+	₹252.06	
+HELD
+Biocon
+BIOCON · PHARMA/BIOTECH · LARGE
+	₹400.37	BUY
+Dr. Reddy's Laboratories
+DRREDDY · PHARMA/BIOTECH · L
+still orders-full-mid
+still orders-full-bottom
+reveal button found
+confirm button: OPEN THE SIMULATOR
+→
+url after reveal click https://nse-time-capsule.vercel.app/game/simulator
+url after wait https://nse-time-capsule.vercel.app/game/simulator
+REVEAL TEXT NSE CLOSE · 30 JUN 2021
+
+HDFCBANK
+700.87
+▼ 0.76%
+KOTAKBANK
+339.75
+▼ 5.64%
+AXISBANK
+745.19
+▼ 0.32%
+BAJAJFINSV
+1,208.19
+▲ 2.56%
+BAJFINANCE
+589.29
+▲ 6.89%
+SUNDARMFIN
+2,567.59
+▲ 7.00%
+AAVAS
+2,712.40
+▲ 17.79%
+CYIENT
+777.80
+▲ 6.57%
+MPHASIS
+1,911.09
+▲ 9.76%
+HCLTECH
+802.83
+▲ 4.05%
+TECHM
+919.46
+▲ 7.22%
+ZENSARTECH
+290.99
+▲ 8.94%
+COFORGE
+783.58
+▲ 18.25%
+INFY
+1,376.83
+▲ 14.64%
+WIPRO
+252.06
+▲ 1.22%
+BIOCON
+400.37
+▲ 4.18%
+DRREDDY
+1,051.05
+▲ 2.15%
+CIPLA
+927.43
+▲ 2.38%
+DIVISLAB
+4,276.17
+▲ 5.11%
+GODREJCP
+831.23
+▲ 1.60%
+COLPAL
+1,503.35
+▼ 2.01%
+JYOTHYLAB
+144.08
+▼ 0.16%
+BRITANNIA
+3,436.93
+▲ 6.25%
+TATACONSUM
+723.80
+▲ 14.29%
+MARICO
+499.68
+▲ 11.70%
+NESTLEIND
+838.10
+▼ 0.35%
+ITC
+159.60
+▼ 3.72%
+VBL
+95.86
+▲ 8.19%
+TATAMOTORS
+330.85
+▲ 6.54%
+HAVELLS
+949.03
+▼ 4.58%
+VOLTAS
+993.99
+▲ 1.50%
+ASTRAL
+1,478.37
+▲ 6.10%
+KAJARIACER
+941.81
+▲ 1.47%
+AMBUJACEM
+327.80
+▲ 4.24%
+CERA
+4,335.24
+▲ 13.54%
+SUPREMEIND
+2,083.47
+▼ 3.86%
+GRINDWELL
+1,197.42
+▲ 1.78%
+RELIANCE
+955.95
+▼ 1.96%
+BPCL
+166.56
+▼ 0.82%
+ADANIGREEN
+1,124.90
+▼ 11.30%
+RPOWER
+15.00
+▲ 73.41%
+GUJGASLTD
+632.85
+▲ 23.21%
+IGL
+250.41
+▲ 5.47%
+AARTIIND
+859.12
+▲ 3.94%
+GARFIBRES
+665.09
+▲ 17.87%
+RAJESHEXPO
+562.90
+▲ 9.03%
+RELAXO
+1,132.18
+▲ 1.45%
+ZEEL
+203.44
+▲ 2.58%
+JPASSOCIAT
+12.55
+▲ 41.81%
+BALKRISIND
+2,148.35
+▲ 1.96%
+BOSCHLTD
+13,894.84
+▼ 1.52%
+GABRIEL
+114.64
+▲ 1.14%
+JAMNAAUTO
+77.75
+▲ 1.45%
+LUMAXIND
+1,434.53
+▼ 5.55%
+MINDACORP
+125.81
+▲ 2.07%
+SUPRAJIT
+273.68
+▲ 5.63%
+DCBBANK
+98.40
+▼ 1.38%
+FEDERALBNK
+83.26
+▼ 0.17%
+KARURVYSYA
+39.42
+▼ 9.63%
+CCL
+347.12
+▲ 2.02%
+KEI
+688.41
+▲ 12.52%
+POLYCAB
+1,911.94
+▲ 17.97%
+IFBIND
+1,022.00
+▼ 3.07%
+AMBER
+2,926.20
+▲ 7.28%
+DIXON
+4,411.44
+▲ 9.74%
+KIRLOSENG
+222.47
+▲ 2.65%
+THERMAX
+1,449.53
+▲ 4.25%
+ZENTEC
+90.55
+▲ 26.52%
+BAJAJCON
+262.51
+▲ 0.31%
+HERITGFOOD
+207.85
+▲ 27.06%
+DEEPAKFERT
+371.23
+▲ 33.25%
+INDHOTEL
+135.14
+▲ 1.84%
+JUBLFOOD
+608.16
+▼ 1.00%
+KPITTECH
+252.86
+▲ 6.74%
+LTTS
+2,721.67
+▲ 7.09%
+NEWGEN
+304.75
+▲ 54.55%
+PERSISTENT
+1,411.87
+▲ 15.57%
+TANLA
+744.78
+▼ 12.83%
+TATAELXSI
+4,087.78
+▲ 19.66%
+GREENPANEL
+229.71
+▼ 8.86%
+NILKAMAL
+2,101.53
+▼ 0.04%
+SANDESH
+788.10
+▲ 1.33%
+GRAVITA
+125.24
+▲ 23.06%
+CHOLAFIN
+507.76
+▼ 6.56%
+MANAPPURAM
+153.00
+▲ 4.06%
+MUTHOOTFIN
+1,379.30
+▲ 12.96%
+REPCOHOME
+351.14
+▲ 5.66%
+AJANTPHARM
+1,341.67
+▲ 11.87%
+ALKEM
+3,035.27
+▲ 7.03%
+LAURUSLABS
+678.28
+▲ 31.48%
+TORNTPHARM
+1,366.43
+▲ 6.40%
+APCOTEXIND
+298.59
+▼ 4.67%
+NAVINFLUOR
+3,687.71
+▲ 16.26%
+NOCIL
+203.28
+▲ 4.82%
+SRF
+1,430.16
+▲ 11.71%
+ARVIND
+73.58
+▼ 2.00%
+HIMATSEIDE
+184.18
+▲ 13.47%
+PAGEIND
+27,813.20
+▼ 3.73%
+RAYMOND
+408.34
+▲ 11.85%
+HDFCBANK
+700.87
+▼ 0.76%
+KOTAKBANK
+339.75
+▼ 5.64%
+AXISBANK
+7
+clip saved reveal
+result url https://nse-time-capsule.vercel.app/game/orders
+RESULT PAGE TEXT MarketMind
+SCREENER
+TERMINAL
+ORDERS
+HOME
+DARK
+TEAM
+DESK NINE
+← THE MARKET
+
+03 — ORDERS
+
+SAVED
+Spend
+₹1,00,000.
+
+For Mr & Mrs Fernandes (low risk, for life). Buy at the 30 June 2021 close, as many companies as you trust. Your whole team edits this slip together.
+
+SPENT
+₹8,461.82
+LEFT TO SPEND
+₹91,538.18
+
+8.5% SPENT · 7 COMPANIES
+
+NEXT: THE REVEAL
+→
+FIND A COMPANY
+SECTOR
+Every sector
+Banks
+NBFC/Financial Services
+IT Services
+Pharma/Biotech
+FMCG
+Beverages
+Auto
+Consumer Durables
+Industrials/Building Materials
+Auto Components
+Electronics Manufacturing
+Cables & Wires
+Engineering & Capital Goods
+Metals & Recycling
+Energy/Oil & Gas
+Power/Utilities
+Gas Distribution
+Specialty Chemicals
+Textiles
+Jewellery
+Footwear
+Media
+Infra/Cement
+Fertilizers & Agrochem
+Hospitality & QSR
+Fintech
+100/100
+Stock universe. Buy any row to add it to your orders.
+COMPANY	30 JUN 2021	
+Buy
+
+HDFC Bank
+
+HDFCBANK · BANKS · LARGE
+
+	₹700.87	
+HELD
+Kotak Mahindra Bank
+
+KOTAKBANK · BANKS · LARGE
+
+	₹339.75	
+HELD
+Axis Bank
+
+AXISBANK · BANKS · LARGE
+
+	₹745.19	BUY
+Bajaj Finserv
+
+BAJAJFINSV · NBFC/FINANCIAL SERVICES · LARGE
+
+	₹1,208.19	BUY
+Bajaj Finance
+
+BAJFINANCE · NBFC/FINANCIAL SERVICES · LARGE
+
+	₹589.29	BUY
+Sundaram Finance
+
+SUNDARMFIN · NBFC/FINANCIAL SERVICES · LARGE
+
+	₹2,567.59	
+HELD
+Aavas Financiers
+
+AAVAS · NBFC/FINANCIAL SERVICES · LARGE
+
+	₹2,712.40	
+HELD
+Cyient
+
+CYIENT · IT SERVICES · MID
+
+	₹777.80	BUY
+Mphasis
+
+MPHASIS · IT SERVICES · LARGE
+
+	₹1,911.09	BUY
+HCL Technologies
+
+HCLTECH · IT SERVICES · LARGE
+
+	₹802.83	BUY
+Tech Mahindra
+
+TECHM · IT SERVICES · LARGE
+
+	₹919.46	BUY
+Zensar Technologies
+
+ZENSARTECH · IT SERVICES · MID
+
+	₹290.99	BUY
+Coforge
+
+COFORGE · IT SERVICES · LARGE
+
+	₹783.58	BUY
+Infosys
+
+INFY · IT SERVICES · LARGE
+
+	₹1,376.83	BUY
+Wipro
+
+WIPRO · IT SERVICES · LARGE
+
+	₹252.06	
+HELD
+Biocon
+
+BIOCON · PHARMA/BIOTECH · LARGE
+
+	₹400.37	BUY
+Dr. Reddy's Laboratories
+
+DRREDDY · PHARMA/BIOTECH · LARGE
+
+	₹1,051.05	
+HELD
+Cipla
+
+CIPLA · PHARMA/BIOTECH · LARGE
+
+	₹927.43	BUY
+Divi's Laboratories
+
+DIVISLAB · PHARMA/BIOTECH · LARGE
+
+	₹4,276.17	BUY
+Godrej Consumer Products
+
+GODREJCP · FMCG · LARGE
+
+	₹831.23	BUY
+Colgate-Palmolive (India)
+
+COLPAL · FMCG · LARGE
+
+	₹1,503.35	BUY
+Jyothy Labs
+
+JYOTHYLAB · FMCG · MID
+
+	₹144.08	BUY
+Britannia Industries
+
+BRITANNIA · FMCG · LARGE
+
+	₹3,436.93	BUY
+Tata Consumer Products
+
+TATACONSUM · FMCG · LARGE
+
+	₹723.80	BUY
+Marico
+
+MARICO · FMCG · LARGE
+
+	₹499.68	BUY
+Nestle India
+
+NESTLEIND · FMCG · LARGE
+
+	₹838.10	
+HELD
+ITC
+
+ITC · FMCG · LARGE
+
+	₹159.60	BUY
+Varun Beverages
+
+VBL · BEVERAGES · LARGE
+
+	₹95.86	BUY
+Tata Motors
+
+TATAMOTORS · AUTO · LARGE
+
+	₹330.85	BUY
+Havells India
+
+HAVELLS · CONSUMER DURABLES · LARGE
+
+	₹949.03	BUY
+Voltas
+
+VOLTAS · CONSUMER DURABLES · LARGE
+
+	₹993.99	BUY
+Astral
+
+ASTRAL · INDUSTRIALS/BUILDING MATERIALS · LARGE
+
+	₹1,478.37	BUY
+Kajaria Ceramics
+
+KAJARIACER · INDUSTRIALS/BUILDING MATERIALS · MID
+
+	₹941.81	BUY
+Ambuja Cements
+
+AMBUJACEM · INDUSTRIALS/BUILDING MATERIALS · LARGE
+
+	₹327.80	BUY
+Cera Sanitaryware
+
+CERA · INDUSTRIALS/BUILDING MATERIALS · MID
+
+	₹4,335.24	BUY
+Supreme Industries
+
+SUPREMEIND · INDUSTRIALS/BUILDING MATERIALS · LARGE
+
+	₹2,083.47	BUY
+Grindwell Norton
+
+GRINDWELL · INDUSTRIALS/BUILDING MATERIALS · MID
+
+	₹1,197.42	BUY
+Reliance Industries
+
+RELIANCE · ENERGY/OIL & GAS · LARGE
+
+	₹955.95	BUY
+Bharat Petroleum
+
+BPCL · ENERGY/OIL & GAS · LARGE
+
+	₹166.56	BUY
+Adani Green Energy
+
+ADANIGREEN · POWER/UTILITIES · LARGE
+
+	₹1,124.90	BUY
+Reliance Power
+
+RPOWER · POWER/UTILITIES · SMALL
+
+	₹15.00	BUY
+Gujarat Gas
+
+GUJGASLTD · GAS DIST
+height 2441
+still res-0
+still res-600
+still res-1200
+still res-1800
+still res-2400
+clip saved results-scroll
+still team-final
+TEAM TEXT ZENTEC
+90.55
+▲ 26.52%
+BAJAJCON
+262.51
+▲ 0.31%
+HERITGFOOD
+207.85
+▲ 27.06%
+DEEPAKFERT
+371.23
+▲ 33.25%
+INDHOTEL
+135.14
+▲ 1.84%
+JUBLFOOD
+608.16
+▼ 1.00%
+KPITTECH
+252.86
+▲ 6.74%
+LTTS
+2,721.67
+▲ 7.09%
+NEWGEN
+304.75
+▲ 54.55%
+PERSISTENT
+1,411.87
+▲ 15.57%
+TANLA
+744.78
+▼ 12.83%
+TATAELXSI
+4,087.78
+▲ 19.66%
+GREENPANEL
+229.71
+▼ 8.86%
+NILKAMAL
+2,101.53
+▼ 0.04%
+SANDESH
+788.10
+▲ 1.33%
+GRAVITA
+125.24
+▲ 23.06%
+CHOLAFIN
+507.76
+▼ 6.56%
+MANAPPURAM
+153.00
+▲ 4.06%
+MUTHOOTFIN
+1,379.30
+▲ 12.96%
+REPCOHOME
+351.14
+▲ 5.66%
+AJANTPHARM
+1,341.67
+▲ 11.87%
+ALKEM
+3,035.27
+▲ 7.03%
+LAURUSLABS
+678.28
+▲ 31.48%
+TORNTPHARM
+1,366.43
+▲ 6.40%
+APCOTEXIND
+298.59
+▼ 4.67%
+NAVINFLUOR
+3,687.71
+▲ 16.26%
+NOCIL
+203.28
+▲ 4.82%
+SRF
+1,430.16
+▲ 11.71%
+ARVIND
+73.58
+▼ 2.00%
+HIMATSEIDE
+184.18
+▲ 13.47%
+PAGEIND
+27,813.20
+▼ 3.73%
+RAYMOND
+408.34
+▲ 11.85%
+MarketMind
+SCREENER
+TERMINAL
+ORDERS
+HOME
+DARK
+TEAM
+DESK NINE
+
+TEAM
+
+SIGNED IN AS ANANYA
+
+Desk Nine
+
+JOIN CODE
+
+Q9Y-VVR
+
+Teammates sign up with their own email, choose “Join a team” and type this in. Up to five of you.
+
+MEMBERS · 2 OF 5
+
+Ananya
+YOU
+Rohit
+
+YOUR CLIENT
+
+Mr & Mrs Fernandes
+
+Elderly Retired Couple
+
+₹1,00,000 · low risk
+
+SIMULATOR CLOSED · SCORES HIDDEN
+
+BACK TO THE RESEARCH
+→
+LOG OUT
+DONE
+```
