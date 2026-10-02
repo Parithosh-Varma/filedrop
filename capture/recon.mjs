@@ -1,162 +1,130 @@
-// Recon pass: learn the real MarketMind UI from a CI runner (sandbox has no route to the site).
-// Creates a throwaway account, walks the flow, dumps text + screenshots + static assets.
+// Recon pass 2: full flow with correct selectors, dark theme, two accounts (team mode).
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
 
 const BASE = 'https://nse-time-capsule.vercel.app';
-const OUT = path.resolve('captures/recon');
+const OUT = path.resolve('captures/recon2');
+fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
-fs.mkdirSync(path.join(OUT, 'assets'), { recursive: true });
 
 const stamp = Date.now().toString(36);
-const ACC = {
-  a: { email: `mmfilm.${stamp}.a@example.com`, pass: 'Capture@2021x', name: 'Ananya' },
-  b: { email: `mmfilm.${stamp}.b@example.com`, pass: 'Capture@2021x', name: 'Rohit' },
-};
+const A = { email: `mmfilm.${stamp}.a@gmail.com`, pass: 'Capture@2021x', name: 'Ananya' };
+const B = { email: `mmfilm.${stamp}.b@gmail.com`, pass: 'Capture@2021x', name: 'Rohit' };
 const log = [];
-const L = (...a) => { console.log(...a); log.push(a.map(x => typeof x === 'string' ? x : JSON.stringify(x, null, 1)).join(' ')); };
+const L = (...a) => { const s = a.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' '); console.log(s); log.push(s); };
+const save = () => fs.writeFileSync(path.join(OUT, 'report.md'), '# recon2\n\n' + JSON.stringify({ A, B }) + '\n\n```\n' + log.join('\n') + '\n```\n');
 
 let n = 0;
-async function shot(page, label) {
+async function shot(page, label, full = false) {
   const id = String(++n).padStart(2, '0');
-  const file = path.join(OUT, `${id}-${label}.jpg`);
-  await page.screenshot({ path: file, quality: 70, type: 'jpeg' });
-  const text = await page.evaluate(() => document.body.innerText.replace(/\n{3,}/g, '\n\n').slice(0, 3500));
-  const ctl = await page.evaluate(() => [...document.querySelectorAll('button,a[href],input,select,[role=button],[role=tab]')]
-    .slice(0, 120).map(e => `${e.tagName}${e.getAttribute('href') ? '['+e.getAttribute('href')+']' : ''}${e.getAttribute('type') ? '('+e.getAttribute('type')+')' : ''}${e.name ? '{'+e.name+'}' : ''}: ${(e.innerText || e.placeholder || '').trim().replace(/\s+/g, ' ').slice(0, 60)}`));
-  L(`\n===== [${id}] ${label} :: ${page.url()}\n--- TEXT ---\n${text}\n--- CONTROLS ---\n${ctl.join('\n')}`);
-  return file;
+  try { await page.screenshot({ path: path.join(OUT, `${id}-${label}.jpg`), quality: 68, type: 'jpeg', fullPage: full }); } catch (e) { L('shot fail', label, e.message); }
+  const text = await page.evaluate(() => document.body.innerText.replace(/\n{3,}/g, '\n\n').slice(0, 3000)).catch(() => '');
+  const ctl = await page.evaluate(() => [...document.querySelectorAll('button,a[href],[role=tab],input,select')].slice(0, 90)
+    .map(e => `${e.tagName}${e.getAttribute('href') ? '[' + e.getAttribute('href') + ']' : ''}${e.id ? '#' + e.id : ''}: ${(e.innerText || e.placeholder || '').trim().replace(/\s+/g, ' ').slice(0, 50)}`)).catch(() => []);
+  L(`\n===== [${id}] ${label} :: ${page.url()}\n--TEXT--\n${text}\n--CTL--\n${ctl.join(' | ')}`);
+  save();
 }
+async function html(page, label) { try { fs.writeFileSync(path.join(OUT, `html-${label}.html`), (await page.content()).slice(0, 500000)); } catch (e) {} }
+async function dark(page) { await page.locator('button[aria-label="Switch to dark theme"]').first().click({ timeout: 4000 }).catch(() => L('no dark toggle')); await page.waitForTimeout(700); }
 
-async function dumpHtml(page, label) {
-  const html = await page.content();
-  fs.writeFileSync(path.join(OUT, `html-${label}.html`), html.slice(0, 400000));
+async function signup(ctx, acc, mode, teamNameOrCode) {
+  const page = await ctx.newPage();
+  await page.goto(BASE + '/game', { waitUntil: 'networkidle', timeout: 90000 });
+  await page.waitForTimeout(1200);
+  await dark(page);
+  await page.fill('#email', acc.email);
+  await page.fill('#password', acc.pass);
+  await page.fill('#name', acc.name);
+  if (mode === 'join') { await page.getByRole('button', { name: /join a team/i }).first().click().catch(e => L('join tab fail', e.message)); await page.waitForTimeout(500); }
+  const field = mode === 'join' ? '#teamCode' : '#teamName';
+  const has = await page.locator(field).count();
+  L('field', field, 'count', has);
+  if (has) await page.fill(field, teamNameOrCode);
+  else { const last = page.locator('form input:not([type=hidden]):not([type=checkbox])').last(); await last.fill(teamNameOrCode); }
+  await shot(page, `signup-${acc.name}`);
+  await page.locator('button[type=submit]').first().click();
+  await page.waitForTimeout(7000);
+  await shot(page, `after-signup-${acc.name}`);
+  await html(page, `after-signup-${acc.name}`);
+  return page;
 }
 
 const browser = await chromium.launch();
-const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
-const page = await ctx.newPage();
-page.on('console', m => { if (m.type() === 'error') L('[console error]', m.text().slice(0, 200)); });
-
 try {
-  // ---------- 1. landing page + static assets ----------
-  await page.goto(BASE, { waitUntil: 'networkidle', timeout: 90000 });
-  await page.waitForTimeout(2500);
-  await shot(page, 'landing-hero');
-  await dumpHtml(page, 'landing');
+  const ctxA = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+  const pA = await signup(ctxA, A, 'create', 'Desk Nine');
 
-  const assetUrls = await page.evaluate(() => {
-    const out = new Set();
-    document.querySelectorAll('link[rel=stylesheet],link[as=style]').forEach(l => out.add(l.href));
-    document.querySelectorAll('link[as=font],link[rel=preload][href*=".woff"]').forEach(l => out.add(l.href));
-    document.querySelectorAll('img,svg image').forEach(i => { if (i.src) out.add(i.src); });
-    return [...out];
-  });
-  L('ASSETS', assetUrls);
-  // also grab fonts actually used
-  const fontFaces = await page.evaluate(() => {
-    const srcs = [];
-    for (const ss of document.styleSheets) {
-      try { for (const r of ss.cssRules) if (r.constructor.name === 'CSSFontFaceRule') srcs.push(r.cssText.slice(0, 400)); } catch (e) {}
-    }
-    const used = new Set();
-    document.querySelectorAll('h1,h2,h3,p,span,button,div').forEach(e => used.add(getComputedStyle(e).fontFamily));
-    return { fontFaces: srcs.slice(0, 40), families: [...used].slice(0, 20), bodyBg: getComputedStyle(document.body).backgroundColor, bodyColor: getComputedStyle(document.body).color };
-  });
-  L('FONTS', fontFaces);
+  // discover routes/nav
+  const nav = await pA.evaluate(() => [...document.querySelectorAll('a[href]')].map(a => a.getAttribute('href') + ' :: ' + (a.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 40)));
+  L('NAV', nav.join(' | '));
 
-  for (const u of assetUrls.slice(0, 40)) {
+  // team code (if shown)
+  const codeTxt = await pA.evaluate(() => document.body.innerText.match(/\b[A-Z]{6}\b/g)?.slice(0, 6) || []);
+  L('possible team codes', codeTxt);
+
+  // walk every in-app link
+  const links = [...new Set(await pA.evaluate(() => [...document.querySelectorAll('a[href^="/"]')].map(a => a.getAttribute('href'))))];
+  L('LINKS', links);
+  for (const href of links.slice(0, 12)) {
     try {
-      const r = await ctx.request.get(u);
-      if (!r.ok()) continue;
-      const name = u.split('/').pop().split('?')[0];
-      fs.writeFileSync(path.join(OUT, 'assets', name), await r.body());
-      // pull woff2 referenced inside css
-      if (name.endsWith('.css')) {
-        const css = (await r.text());
-        const refs = [...css.matchAll(/url\(([^)]+)\)/g)].map(m => m[1].replace(/['"]/g, ''));
-        for (const ref of refs.slice(0, 20)) {
-          const full = new URL(ref, u).href;
-          if (!/\.(woff2?|ttf|otf|png|svg|jpg)$/.test(full)) continue;
-          try { const rr = await ctx.request.get(full); if (rr.ok()) fs.writeFileSync(path.join(OUT, 'assets', full.split('/').pop().split('?')[0]), await rr.body()); } catch (e) {}
-        }
-      }
-    } catch (e) { L('asset fail', u, e.message); }
+      await pA.goto(BASE + href, { waitUntil: 'networkidle', timeout: 60000 });
+      await pA.waitForTimeout(2200);
+      await shot(pA, 'nav' + href.replace(/\//g, '_'));
+      await html(pA, 'nav' + href.replace(/\//g, '_'));
+    } catch (e) { L('nav fail', href, e.message); }
   }
 
-  // scroll through the landing page
-  const marks = [0.18, 0.33, 0.5, 0.66, 0.8, 0.95];
-  for (const m of marks) {
-    await page.evaluate(f => window.scrollTo({ top: document.body.scrollHeight * f, behavior: 'instant' }), m);
-    await page.waitForTimeout(1600);
-    await shot(page, `landing-${Math.round(m * 100)}`);
-  }
-
-  // ---------- 2. sign up ----------
-  await page.goto(BASE + '/game', { waitUntil: 'networkidle', timeout: 90000 });
-  await page.waitForTimeout(1500);
-  await shot(page, 'auth');
-  await dumpHtml(page, 'auth');
-
-  const fill = async (sel, val) => { const el = page.locator(sel).first(); if (await el.count()) { await el.fill(val); return true; } return false; };
-  await page.getByText('New here', { exact: false }).first().click().catch(() => {});
-  await page.waitForTimeout(400);
-  await fill('input[type=email]', ACC.a.email);
-  await fill('input[type=password]', ACC.a.pass);
-  const textInputs = page.locator('input[type=text]');
-  const tcount = await textInputs.count();
-  L('text inputs', tcount);
-  if (tcount >= 1) await textInputs.nth(0).fill(ACC.a.name);
-  await page.getByText('Start a team', { exact: false }).first().click().catch(() => {});
-  await page.waitForTimeout(300);
-  if (tcount >= 2) await textInputs.nth(1).fill('Desk Nine');
-  await shot(page, 'auth-filled');
-  await page.getByRole('button', { name: /create account|sign up|→/i }).first().click().catch(e => L('submit click fail', e.message));
-  await page.waitForTimeout(6000);
-  await shot(page, 'after-signup');
-  await dumpHtml(page, 'after-signup');
-
-  // ---------- 3. walk whatever the app shows ----------
-  const navTexts = await page.evaluate(() => [...document.querySelectorAll('a[href],button,[role=tab]')]
-    .map(e => ({ t: (e.innerText || '').trim(), h: e.getAttribute('href') || '' }))
-    .filter(x => x.t && x.t.length < 40));
-  L('NAV', navTexts);
-
-  const routes = ['/game', '/game/market', '/market', '/game/client', '/game/team', '/game/portfolio', '/game/results'];
-  for (const r of routes) {
+  // ---- market / research ----
+  for (const r of ['/game/market', '/game/research', '/game/stocks', '/game/companies']) {
     try {
-      await page.goto(BASE + r, { waitUntil: 'networkidle', timeout: 45000 });
-      await page.waitForTimeout(2000);
-      await shot(page, 'route' + r.replace(/\//g, '_'));
+      const resp = await pA.goto(BASE + r, { waitUntil: 'networkidle', timeout: 45000 });
+      L('route', r, resp && resp.status());
+      await pA.waitForTimeout(1800);
+      await shot(pA, 'try' + r.replace(/\//g, '_'));
     } catch (e) { L('route fail', r, e.message); }
   }
 
-  // back to the app shell and click the first few primary actions
-  await page.goto(BASE + '/game', { waitUntil: 'networkidle', timeout: 60000 });
-  await page.waitForTimeout(2500);
-  await shot(page, 'shell');
-  await dumpHtml(page, 'shell');
-
-  const clickable = await page.evaluate(() => [...document.querySelectorAll('button,a[href^="/"]')]
-    .map(e => (e.innerText || '').trim()).filter(t => t && t.length < 40).slice(0, 25));
-  L('CLICKABLE', clickable);
-
-  for (const label of clickable.slice(0, 12)) {
+  // from the main app screen, click the first company-ish link
+  await pA.goto(BASE + '/game', { waitUntil: 'networkidle', timeout: 60000 });
+  await pA.waitForTimeout(2500);
+  await shot(pA, 'app-home-full', true);
+  const stockLinks = [...new Set(await pA.evaluate(() => [...document.querySelectorAll('a[href]')].map(a => a.getAttribute('href')).filter(h => h && /stock|company|ticker|\/game\//.test(h))))];
+  L('STOCKLINKS', stockLinks.slice(0, 40));
+  for (const href of stockLinks.slice(0, 4)) {
     try {
-      await page.goto(BASE + '/game', { waitUntil: 'networkidle', timeout: 45000 });
-      await page.waitForTimeout(1800);
-      const el = page.getByRole('button', { name: label, exact: true }).first();
-      const el2 = (await el.count()) ? el : page.getByText(label, { exact: true }).first();
-      if (!(await el2.count())) continue;
-      await el2.click({ timeout: 5000 });
-      await page.waitForTimeout(2500);
-      await shot(page, 'click-' + label.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24));
-    } catch (e) { L('click fail', label, e.message); }
+      await pA.goto(BASE + href, { waitUntil: 'networkidle', timeout: 60000 });
+      await pA.waitForTimeout(2500);
+      await shot(pA, 'co' + href.replace(/\//g, '_'), true);
+      await html(pA, 'co' + href.replace(/\//g, '_'));
+      // tabs inside company page
+      const tabs = await pA.evaluate(() => [...document.querySelectorAll('[role=tab],button')].map(b => (b.innerText || '').trim()).filter(t => t && t.length < 28).slice(0, 20));
+      L('TABS', href, tabs);
+      for (const t of tabs.slice(0, 8)) {
+        try {
+          const el = pA.getByRole('button', { name: t, exact: true }).first();
+          if (!(await el.count())) continue;
+          await el.click({ timeout: 4000 });
+          await pA.waitForTimeout(1400);
+          await shot(pA, 'cotab-' + t.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 20));
+        } catch (e) { L('tab fail', t, e.message); }
+      }
+    } catch (e) { L('company fail', href, e.message); }
   }
+
+  // ---- second player joins ----
+  const code = (codeTxt && codeTxt[0]) || null;
+  if (code) {
+    const ctxB = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+    const pB = await signup(ctxB, B, 'join', code);
+    await shot(pB, 'player-b');
+    await pA.goto(BASE + '/game', { waitUntil: 'networkidle', timeout: 60000 });
+    await pA.waitForTimeout(3000);
+    await shot(pA, 'team-after-join');
+  } else L('no team code found — skipping player B');
 } catch (e) {
-  L('FATAL', e.message, e.stack?.slice(0, 1200));
+  L('FATAL', e.message, (e.stack || '').slice(0, 1500));
 } finally {
-  fs.writeFileSync(path.join(OUT, 'report.md'), '# MarketMind recon\n\naccounts: ' + JSON.stringify(ACC) + '\n\n```\n' + log.join('\n') + '\n```\n');
+  save();
   await browser.close();
 }
